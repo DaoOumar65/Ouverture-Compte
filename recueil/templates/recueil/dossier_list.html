@@ -1,0 +1,71 @@
+{% extends "recueil/base.html" %}
+{% block title %}Dossiers · BCB Ouverture de compte{% endblock %}
+{% block content %}
+<section class="page-heading heading-list">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> ESPACE DE TRAVAIL</div>
+    <h1>Dossiers d’ouverture de compte</h1>
+    <p class="page-intro">Saisissez les informations client, prévisualisez les formulaires, puis validez pour générer les documents à signer.</p>
+  </div>
+  {% if not is_admin %}
+  <div class="detail-actions">
+    <a class="button button-outline" href="{% url 'recueil:recherche-client' %}">Rechercher un client</a>
+    <a class="button button-primary" href="{% url 'recueil:dossier-create' %}"><span class="button-plus">＋</span> Nouveau dossier</a>
+  </div>
+  {% endif %}
+</section>
+
+<section class="list-toolbar" aria-label="Rechercher et filtrer les dossiers">
+  <form method="get" class="search-form">
+    <label class="sr-only" for="search-dossiers">Rechercher un dossier</label>
+    <span class="search-symbol" aria-hidden="true">⌕</span>
+    <input id="search-dossiers" type="search" name="q" value="{{ query }}" placeholder="Référence, nom ou raison sociale…">
+    <label class="sr-only" for="filter-status">Filtrer par statut</label>
+    <select id="filter-status" name="statut">
+      <option value="">Tous les statuts</option>
+      {% for value,label in status_choices %}<option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <button class="button button-outline" type="submit">Filtrer</button>
+  </form>
+  <span class="list-count"><strong>{{ page_obj.paginator.count }}</strong> dossier{{ page_obj.paginator.count|pluralize:"s" }}</span>
+</section>
+
+<section class="table-wrap" tabindex="0" role="region" aria-label="Liste des dossiers, défilement horizontal possible">
+  <p class="table-scroll-hint">Sur petit écran, faites défiler le tableau horizontalement pour afficher toutes les colonnes.</p>
+  <table class="dossier-table">
+    <thead><tr><th>Référence</th><th>Client / entreprise</th><th>Formule de compte</th><th>Statut</th><th>Mis à jour</th><th><span class="sr-only">Ouvrir</span></th></tr></thead>
+    <tbody>
+      {% for dossier in page_obj %}
+      <tr>
+        <td><a class="reference-link" href="{% url 'recueil:dossier-detail' dossier.pk %}">{{ dossier.reference }}</a></td>
+        <td><strong class="client-name">{% if dossier.type_compte == "COMMERCIAL" and dossier.pm_raison_sociale %}{{ dossier.pm_raison_sociale }}{% else %}{{ dossier.prenoms }} {{ dossier.nom }}{% endif %}</strong><small class="row-subtitle">{% if dossier.type_compte == "COMMERCIAL" %}Dossier commercial{% else %}Dossier particulier{% endif %}</small></td>
+        <td>{{ dossier.get_formule_produit_display }}</td>
+        <td><span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span></td>
+        <td class="date-cell">{{ dossier.maj_le|date:"d/m/Y" }}<small>{{ dossier.maj_le|date:"H:i" }}</small></td>
+        <td><a class="row-open" href="{% url 'recueil:dossier-detail' dossier.pk %}" aria-label="Ouvrir le dossier {{ dossier.reference }}">Ouvrir <span aria-hidden="true">↗</span></a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">
+        <div class="empty-state">
+          <span class="empty-mark">＋</span>
+          {% if query or status %}
+            <h2>Aucun résultat</h2><p>Aucun dossier ne correspond à ces critères. Modifiez la recherche ou le filtre.</p>
+            <a class="button button-outline" href="{% url 'recueil:dossier-list' %}">Effacer les filtres</a>
+          {% else %}
+            <h2>Votre espace est prêt</h2><p>Les dossiers enregistrés apparaîtront ici. Commencez par recueillir les informations d'un client.</p>
+            <a class="button button-primary" href="{% url 'recueil:dossier-create' %}">Créer un premier dossier</a>
+          {% endif %}
+        </div>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% if page_obj.paginator.num_pages > 1 %}
+<nav class="pagination" aria-label="Pagination">
+  {% if page_obj.has_previous %}<a href="?q={{ query|urlencode }}&statut={{ status|urlencode }}&page={{ page_obj.previous_page_number }}">← Précédent</a>{% else %}<span class="disabled">← Précédent</span>{% endif %}
+  <span>Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}<a href="?q={{ query|urlencode }}&statut={{ status|urlencode }}&page={{ page_obj.next_page_number }}">Suivant →</a>{% else %}<span class="disabled">Suivant →</span>{% endif %}
+</nav>
+{% endif %}
+{% endblock %}

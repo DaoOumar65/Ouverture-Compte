@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>BCB – {{ dossier.reference }} – Formulaires Commercial</title>
+<style>
+  @page { size: A4; margin: 10mm 12mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #e9e9e9; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.25; }
+
+  /* ---- Barre outils (jamais imprimée) ---- */
+  .barre-outils { position: relative; z-index: 10; background: #1f2937; color: #fff; padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 14px; align-items: center; font-size: 13px; }
+  .barre-outils label { display: inline-flex; gap: 4px; align-items: center; }
+  .barre-outils button, .barre-outils a { background: #fff; color: #111; border: 0; border-radius: 4px; padding: 6px 12px; font-size: 13px; cursor: pointer; text-decoration: none; }
+  .barre-outils .imprimer { background: #16a34a; color: #fff; font-weight: bold; }
+
+  /* ---- Pages ---- */
+  .page { width: min(210mm, calc(100vw - 32px)); min-height: 277mm; margin: 8mm auto; padding: 10mm 12mm; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.3); break-after: page; page-break-after: always; }
+  @media print {
+    body { background: #fff; }
+    .barre-outils { display: none !important; }
+    .page { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .page:last-of-type { break-after: auto; page-break-after: auto; }
+  }
+
+  /* ---- Éléments communs ---- */
+  .logo { display: flex; align-items: center; gap: 3mm; }
+  .logo-img { height: 12mm; width: auto; }
+  .logo .nom-banque { font-size: 8pt; font-weight: bold; }
+  .cb { display: inline-block; position: relative; width: 3.4mm; height: 3.4mm; border: .35mm solid #000; vertical-align: -0.7mm; margin: 0 1mm; background: #fff; }
+  .cb.on::after { content: "X"; position: absolute; left: 0; right: 0; top: -.15mm; text-align: center; font: bold 3.3mm/3.5mm Arial, sans-serif; }
+  .row { display: flex; align-items: baseline; gap: 1.5mm; margin: 1.1mm 0; }
+  .lbl { white-space: nowrap; }
+  .val { flex: 1; min-height: 4.2mm; border-bottom: 1px dotted #000; padding: 0 1mm; font-weight: bold; }
+  .souligne { text-decoration: underline; }
+  .gras { font-weight: bold; }
+  .cadre { width: 100%; border-collapse: collapse; }
+  .cadre td { border: 1px solid #000; padding: 1.5mm 2mm; vertical-align: top; }
+  .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 10.5pt; padding: 1mm; margin: 2mm 1mm 3mm; }
+  .pied { text-align: center; font-weight: bold; margin-top: 4mm; }
+
+  /* ---- KYC PM ---- */
+  .comm-kyc-pm { font-size: 8.5pt; }
+  .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
+  .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 11pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
+
+  /* ---- KYC PP (mandataire) : réutilise les styles F3 ---- */
+  .f3 { font-size: 8.3pt; }
+  .f3 .row { margin: .7mm 0; }
+  .f3 .val { min-height: 3.6mm; }
+  .f3 .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
+  .f3 .entete-kyc .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 13pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
+  .f3 .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 11pt; padding: 1mm; margin: 2mm 1mm 3mm; }
+  .f3 .grille2 { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000; margin-top: 2mm; }
+  .f3 .grille2 > .col + .col { border-left: 1px solid #000; }
+  .f3 .cel { padding: 1.2mm 2mm; border-bottom: 1px solid #000; }
+  .f3 .cel:last-child { border-bottom: 0; }
+  .f3 .cel-titre { font-weight: bold; font-style: italic; }
+  .f3 .pied { text-align: center; font-weight: bold; margin-top: 4mm; }
+  .f3 .liste-cb div { margin: .8mm 0; }
+  .f3 p { margin: 1mm 0; text-align: justify; }
+
+  /* ---- F1 Renseignements ---- */
+  .f1 { font-family: "Times New Roman", Times, serif; font-size: 10.5pt; }
+  .f1 h1 { text-align: center; font-size: 14pt; text-decoration: underline; margin: 14mm 0 8mm; letter-spacing: .2mm; }
+  .f1 .cadre td.g { width: 31%; font-style: italic; font-weight: bold; text-transform: uppercase; vertical-align: middle; }
+  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 9.5pt; }
+  .f1 .cadre td { padding: .7mm 1mm; }
+  .f1 .cadre tr.h9 td { height: 6mm; padding: .5mm 1mm; vertical-align: middle; }
+  .f1 .cadre td .row { margin: .15mm 0; line-height: 1; }
+  .f1 .cadre td .val { min-height: 2.5mm; padding: 0 .5mm; }
+  .f1 .yn { display: flex; gap: 2mm; margin: .2mm 0; font-weight: bold; font-family: "Times New Roman", Times, serif; line-height: 1; }
+  .f1 .yn .q { width: 52mm; }
+  .f1 .yn .o { width: 20mm; }
+  .f1 .fleche::before { content: "\2192"; margin-right: 2mm; }
+
+  /* ---- F2 ---- */
+  .f2 { font-family: Calibri, Arial, Helvetica, sans-serif; font-size: 9.2pt; }
+  .f2 .entete { text-align: center; }
+  .f2 .entete .logo { justify-content: center; flex-direction: column; gap: 1mm; }
+  .f2 h1 { font-size: 10pt; text-align: center; margin: 4mm 0 5mm; }
+  .f2 .cons { display: flex; gap: 2mm; margin: 2.4mm 0; text-align: justify; }
+  .f2 .cons .cb { flex: none; margin-top: .6mm; }
+  .f2 .note { border-top: 1px solid #000; width: 55mm; margin-top: 10mm; padding-top: 1mm; font-size: 7.5pt; }
+  .f2 .bas { font-size: 7.5pt; }
+  .f2 .sig { margin-top: 4mm; }
+
+  /* ---- F4 Localisation ---- */
+  .f4 { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; }
+  .f4 h1 { text-align: center; font-size: 11pt; font-weight: normal; margin: 6mm 0 10mm; }
+  .f4 h2 { font-size: 10.5pt; font-weight: normal; margin: 8mm 0 5mm; }
+  .f4 h2 span { text-decoration: underline; margin-left: 12mm; }
+  .f4 .row { margin: 3.2mm 0; }
+  .f4 .val { font-weight: bold; }
+
+  /* ---- F5 Plan ---- */
+  .f5 { border: .3mm solid #000; padding: 8mm; }
+  .f5 .cadre-plan { border: .3mm solid #000; height: 215mm; margin: 12mm 6mm 0; text-align: center; padding-top: 2mm; }
+  .f5 .cadre-plan span { text-decoration: underline; font-size: 12pt; }
+
+  /* ---- Spécimen ---- */
+  .comm-specimen { font-size: 9pt; }
+
+  /* ---- Convention ---- */
+  .comm-convention { font-size: 9pt; }
+  .comm-convention h3 { margin: 3mm 0 1mm; font-size: 9.5pt; }
+
+  /* ---- Cover ---- */
+  .comm-cover { font-size: 9.5pt; }
+  .comm-cover .cadre-num { border: 1px solid #000; min-width: 38mm; min-height: 15mm; }
+
+  @media screen and (max-width: 700px) {
+    .barre-outils { gap: 8px; padding: 8px; }
+    .page { padding: 8mm; }
+    .f3 .grille2 { grid-template-columns: minmax(0, 1fr); }
+    .f3 .grille2 > .col + .col { border-top: 1px solid #000; border-left: 0; }
+  }
+  @media print { .f5 { min-height: 270mm; } }
+</style>
+</head>
+<body>
+
+<form method="get" class="barre-outils">
+  <strong>{{ dossier.reference }} — Commercial</strong>
+  {% for code, nom in formulaires %}
+    <label><input type="checkbox" name="f" value="{{ code }}" {% if code in choisis %}checked{% endif %}> {{ nom }}</label>
+  {% endfor %}
+  <label>Exemplaires F2 <input type="number" name="copies" min="1" max="5" value="{{ copies }}" style="width:46px;"></label>
+  <button type="submit">Appliquer</button>
+  <button type="button" class="imprimer" onclick="imprimerFiches()">Imprimer</button>
+  <a href="{% url 'recueil:dossier-detail' dossier.pk %}">Retour au dossier</a>
+</form>
+<form id="impression-csrf" hidden>{% csrf_token %}</form>
+{% if dossier_modifie_depuis_impression %}
+<div style="display:flex; justify-content:space-between; gap:16px; padding:8px 14px; color:#6b521a; border:1px solid #eadcae; background:#fbf5e4; font-size:11px; margin:0 auto; max-width:210mm;">
+  <strong>ATTENTION — LA VERSION IMPRIMÉE N'EST PLUS À JOUR</strong>
+  <span>Le dossier a été modifié après sa dernière impression.</span>
+</div>
+{% endif %}
+
+{% if 'cover' in choisis %}{% include "recueil/print/_comm_cover.html" %}{% endif %}
+{% if 'kyc_pm' in choisis %}{% include "recueil/print/_comm_kyc_pm.html" %}{% endif %}
+{% if 'f2' in choisis %}{% for n in copies_range %}{% include "recueil/print/_comm_f2.html" %}{% endfor %}{% endif %}
+{% if 'f4' in choisis %}{% include "recueil/print/_comm_localisation.html" %}{% endif %}
+{% if 'f5' in choisis %}{% include "recueil/print/_f5.html" %}{% endif %}
+{% if 'f1' in choisis %}{% include "recueil/print/_f1.html" %}{% endif %}
+{% if 'kyc_pp' in choisis %}{% include "recueil/print/_f3.html" %}{% endif %}
+{% if 'specimen' in choisis %}{% include "recueil/print/_comm_specimen.html" %}{% endif %}
+{% if 'convention' in choisis %}{% include "recueil/print/_comm_convention.html" %}{% endif %}
+
+<script>
+  async function imprimerFiches() {
+    const token = document.querySelector("#impression-csrf [name=csrfmiddlewaretoken]").value;
+    try {
+      const response = await fetch("{% url 'recueil:dossier-impression-marquer' dossier.pk %}", {
+        method: "POST",
+        headers: { "X-CSRFToken": token },
+        credentials: "same-origin"
+      });
+      if (!response.ok) {
+        const result = await response.json();
+        window.alert(result.error || "L'impression n'a pas pu être enregistrée.");
+        return;
+      }
+      window.print();
+    } catch (error) {
+      window.alert("Impossible d'enregistrer l'impression. Vérifiez votre connexion puis réessayez.");
+    }
+  }
+</script>
+</body>
+</html>

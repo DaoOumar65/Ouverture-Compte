@@ -1,0 +1,71 @@
+{# Couverture commerciale — Demande d'ouverture de compte (page de garde) #}
+<section class="page comm-cover">
+  <div style="text-align:center; margin-bottom:15mm;">
+    {% include "recueil/print/_logo.html" %}
+  </div>
+
+  <p style="font-size:9pt; margin-bottom:1mm;"><strong>BANQUE COMMERCIALE DU BURKINA</strong><br>
+  SA au capital de 8.000.000.000 FCFA<br>
+  653 avenue Kwamé N'Krumah</p>
+
+  <div style="display:flex; align-items:flex-start; gap:10mm; margin:10mm 0 8mm;">
+    <h2 style="margin:0; font-size:14pt; font-weight:bold; flex:1;">DEMANDE D'OUVERTURE DE COMPTE</h2>
+    <div class="cadre-num" style="border:1px solid #000; min-width:38mm; min-height:15mm;"></div>
+  </div>
+
+  <p style="text-align:justify; margin-bottom:5mm;">
+    Je (nous) soussigné (s) <span class="val" style="display:inline-block;min-width:80mm;"></span><br>
+    de la Société mentionnée ci-dessous, demande (ons) à la <strong>BANQUE COMMERCIALE DU BURKINA</strong>
+    l'ouverture d'un compte dans ses livres suivant les pouvoirs qui m'(nous) ont été
+    donnés par <span class="val" style="display:inline-block;min-width:80mm;"></span>.<br>
+    Je (nous) déclare(ons) que je (nous) jouis (jouissons) de tous mes (nos) droits et garantis(sons) la
+    véracité des renseignements ci-dessous.
+  </p>
+
+  <table class="cadre" style="margin-bottom:8mm;">
+    <tr><td style="font-weight:bold; padding:2mm 3mm;">RAISON SOCIALE</td><td style="font-weight:bold; min-width:80mm; padding:2mm 3mm; border-left:1px solid #000;">{{ dossier.pm_raison_sociale }}</td></tr>
+    <tr><td style="font-weight:bold; padding:2mm 3mm; border-top:1px solid #000;">SIEGE SOCIAL</td><td style="font-weight:bold; padding:2mm 3mm; border-left:1px solid #000; border-top:1px solid #000;">{{ dossier.pm_siege_social }}</td></tr>
+    <tr><td colspan="2" style="padding:2mm 3mm; border-top:1px solid #000;">N° <span class="val" style="display:inline-block;min-width:25mm;"></span> Rue <span class="val" style="display:inline-block;min-width:30mm;"></span> SECTEUR <span class="val" style="display:inline-block;min-width:20mm;">{{ dossier.pm_secteur_rue }}</span></td></tr>
+  </table>
+
+  <div class="row"><span class="lbl">Enregistré au RCCM</span></div>
+  <div class="row"><span class="lbl">Date d'enregistrement :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl">N° d'enregistrement :</span><span class="val">{{ dossier.pm_numero_rccm }}</span></div>
+  <div class="row"><span class="lbl">Objet de la Société :</span><span class="val">{{ dossier.pm_activite_principale }}</span></div>
+  <div class="row"><span class="lbl">Adresse au B.F :</span><span class="val">{{ dossier.pm_siege_social }}</span></div>
+  <div class="row">
+    <span class="lbl">N° :</span><span class="val" style="max-width:30mm;"></span>
+    <span class="lbl">Rue :</span><span class="val" style="max-width:35mm;">{{ dossier.pm_secteur_rue }}</span>
+    <span class="lbl">Secteur :</span><span class="val" style="max-width:25mm;"></span>
+  </div>
+  <div class="row">
+    <span class="lbl">Parcelle :</span><span class="val" style="max-width:30mm;"></span>
+    <span class="lbl">Lot :</span><span class="val" style="max-width:30mm;"></span>
+    <span class="lbl">Section :</span><span class="val"></span>
+  </div>
+
+  <div style="margin:6mm 0 3mm;"><span class="gras">Je (nous) vous remets(tons) ci-joint :</span></div>
+  <div style="margin-left:5mm;">
+    <div>a) une copie des statuts de la Société/contrat d'association</div>
+    <div>b) une copie de mes (nos) pouvoirs/procès-verbal m'(nous) habilitant à ouvrir le compte</div>
+    <div>c) une copie des pouvoirs autorisant les mandataires de faire fonctionner le compte.</div>
+  </div>
+
+  <div style="margin-top:5mm; text-align:right;">
+    Ouagadougou, le <span class="val" style="display:inline-block;min-width:30mm;">{{ date_impression|date:"d/m/Y" }}</span>
+  </div>
+  <div style="margin-top:3mm; text-align:right;">
+    a. Signature <span class="val" style="display:inline-block;min-width:50mm;"></span><br>
+    b. Signature <span class="val" style="display:inline-block;min-width:50mm;"></span>
+  </div>
+
+  <table class="cadre" style="margin-top:8mm; font-size:8pt;">
+    <tr>
+      <td style="padding:1mm 2mm; width:40%;">Pour l'usage de la Banque<br><br>Compte ouvert sous le n° <span class="val" style="display:inline-block;min-width:25mm;"></span></td>
+      <td style="padding:1mm 2mm; border-left:1px solid #000;">Par <span class="val" style="display:inline-block;min-width:30mm;"></span> Signature <span class="val" style="display:inline-block;min-width:20mm;"></span></td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:1mm 2mm; border-top:1px solid #000;">Vérifié par <span class="val" style="display:inline-block;min-width:50mm;"></span> Signature <span class="val" style="display:inline-block;min-width:30mm;"></span></td>
+    </tr>
+  </table>
+</section>

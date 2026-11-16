@@ -1,0 +1,80 @@
+<section class="page f1">
+  <h1>RENSEIGNEMENTS COMPLEMENTAIRES</h1>
+
+  <table class="cadre">
+    <tr class="h9"><td class="g">Nom prénom (s)</td><td class="d">{{ nom_complet }}</td></tr>
+    <tr class="h9"><td class="g">N° de téléphone</td><td class="d">{{ dossier.telephone }}</td></tr>
+    <tr class="h9"><td class="g">Mail</td><td class="d">{{ dossier.email }}</td></tr>
+    <tr class="h9"><td class="g">Adresse postale</td><td class="d">{{ dossier.boite_postale }}</td></tr>
+    <tr class="h9"><td class="g">Date d'embauche</td><td class="d">{{ dossier.date_embauche|date:"d/m/Y" }}</td></tr>
+    <tr class="h9"><td class="g">Nom complet de la mère</td><td class="d">{{ dossier.nom_mere }}</td></tr>
+
+    <tr>
+      <td class="g">Nombre d'enfant<br><br>({{ dossier.nombre_enfants|default_if_none:"" }})</td>
+      <td class="d">
+        {% for prenom in enfants_noms %}
+        <div class="row"><span class="fleche"></span><span class="lbl">PRENOM</span><span class="val">{{ prenom }}</span></div>
+        {% endfor %}
+        {% if suite_enfants %}
+        <div class="row"><span class="fleche"></span><span class="lbl">SUITE : {{ suite_enfants|length }} autre(s) prénom(s) : {{ suite_enfants|join:", " }}</span></div>
+        {% endif %}
+      </td>
+    </tr>
+
+    <tr>
+      <td class="g">Situation matrimoniale</td>
+      <td class="d">
+        <div class="yn"><span class="fleche"></span><span class="q">LEGALEMENT MARIE ? :</span>
+          <span class="o">OUI <i class="cb{% if etat.marie_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.marie_non %} on{% endif %}"></i></span></div>
+        <div class="yn"><span class="fleche"></span><span class="q">MONOGAMIE :</span>
+          <span class="o">OUI <i class="cb{% if etat.mono_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.mono_non %} on{% endif %}"></i></span></div>
+        <div class="yn"><span class="fleche"></span><span class="q">POLYGAMIE :</span>
+          <span class="o">OUI <i class="cb{% if etat.poly_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.poly_non %} on{% endif %}"></i></span></div>
+        <div class="yn"><span class="fleche"></span><span class="q">BIENS COMMUNS :</span>
+          <span class="o">OUI <i class="cb{% if etat.communs_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.communs_non %} on{% endif %}"></i></span></div>
+        <div class="yn"><span class="fleche"></span><span class="q">BIEN SEPARES :</span>
+          <span class="o">OUI <i class="cb{% if etat.separes_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.separes_non %} on{% endif %}"></i></span></div>
+        <div class="yn"><span class="fleche"></span><span class="q">CELIBATAIRE :</span>
+          <span class="o">OUI <i class="cb{% if etat.celib_oui %} on{% endif %}"></i></span><span>NON <i class="cb{% if etat.celib_non %} on{% endif %}"></i></span></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="g">Conjoint (e)</td>
+      <td class="d">
+        <div class="row"><span class="lbl">- NOM COMPLET :</span><span class="val">{{ dossier.conjoint_nom }}</span></div>
+        <div class="row"><span class="lbl">- DATE DE NAISSANCE :</span><span class="val">{{ dossier.conjoint_date_naissance|date:"d/m/Y" }}</span></div>
+        <div class="row"><span class="lbl">- VILLE :</span><span class="val">{{ dossier.conjoint_ville_naissance }}</span></div>
+        <div class="row"><span class="lbl">- PAYS :</span><span class="val">{{ dossier.conjoint_pays_naissance }}</span></div>
+        <div class="row"><span class="lbl">- NOM DE LA MERE :</span><span class="val">{{ dossier.conjoint_nom_mere }}</span></div>
+        <div class="row"><span class="lbl">- CONTACT :</span><span class="val">{{ dossier.conjoint_contact }}</span></div>
+        <div class="row"><span class="lbl">- TYPE DE PIECE D'IDENTITE :</span><span class="val">{{ dossier.get_conjoint_type_piece_display }}</span></div>
+        <div class="row"><span class="lbl">- N° :</span><span class="val">{{ dossier.conjoint_numero_piece }}</span></div>
+        <div class="row"><span class="lbl">- DELIVREE A :</span><span class="val">{{ dossier.conjoint_piece_delivree_a }}</span></div>
+        <div class="row"><span class="lbl">- LE :</span><span class="val">{{ dossier.conjoint_piece_delivree_le|date:"d/m/Y" }}</span></div>
+        <div class="row"><span class="lbl">- PAR :</span><span class="val">{{ dossier.conjoint_piece_delivree_par }}</span></div>
+        <div class="row"><span class="lbl">- EXPIRE LE :</span><span class="val">{{ dossier.conjoint_piece_expire_le|date:"d/m/Y" }}</span></div>
+        <div class="row"><span class="lbl">- PROFESSION :</span><span class="val">{{ dossier.conjoint_profession }}</span></div>
+        <div class="row"><span class="lbl">- DATE D'EMBAUCHE :</span><span class="val">{{ dossier.conjoint_date_embauche|date:"d/m/Y" }}</span></div>
+        <div class="row"><span class="lbl">- TRANCHE DE REVENU :</span><span class="val">{{ dossier.conjoint_tranche_revenu }}</span></div>
+      </td>
+    </tr>
+
+    <tr>
+      <td class="g">Personne à prévenir<br>en cas de besoin</td>
+      <td class="d">
+        <div class="row"><span class="lbl">NOM COMPLET</span><span class="val">{{ dossier.urgence_nom_1 }}</span></div>
+        <div class="row"><span class="fleche"></span><span class="lbl">CONTACT</span><span class="val">{{ dossier.urgence_tel_1 }}</span></div>
+        <div class="row"><span class="fleche"></span><span class="lbl">PROFESSION</span><span class="val">{{ dossier.urgence_prof_1 }}</span></div>
+      </td>
+    </tr>
+    <tr>
+      <td class="g">Personne à prévenir<br>en cas de besoin</td>
+      <td class="d">
+        <div class="row"><span class="fleche"></span><span class="lbl">NOM COMPLET</span><span class="val">{{ dossier.urgence_nom_2 }}</span></div>
+        <div class="row"><span class="fleche"></span><span class="lbl">CONTACT</span><span class="val">{{ dossier.urgence_tel_2 }}</span></div>
+        <div class="row"><span class="fleche"></span><span class="lbl">PROFESSION</span><span class="val">{{ dossier.urgence_prof_2 }}</span></div>
+      </td>
+    </tr>
+  </table>
+</section>

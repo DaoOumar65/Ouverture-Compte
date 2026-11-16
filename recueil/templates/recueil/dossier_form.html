@@ -1,0 +1,114 @@
+{% extends "recueil/base.html" %}
+{% load static %}
+{% block title %}{% if is_edit %}Modifier le dossier{% else %}Nouveau dossier{% endif %} · BCB Ouverture de compte{% endblock %}
+{% block content %}
+<div class="form-header">
+  <a class="back-link" href="{% if dossier %}{% url 'recueil:dossier-detail' dossier.pk %}{% else %}{% url 'recueil:dossier-list' %}{% endif %}">← Retour {% if dossier %}au dossier{% else %}aux dossiers{% endif %}</a>
+  <div class="page-heading heading-form">
+    <div>
+      <div class="eyebrow"><span class="eyebrow-line"></span> OUVERTURE DE COMPTE · {% if is_edit %}{{ dossier.reference }}{% else %}NOUVEAU DOSSIER{% endif %}</div>
+      <h1>{% if is_edit %}Modifier les informations client{% else %}Nouveau dossier d'ouverture{% endif %}</h1>
+      <p class="page-intro">Saisissez les informations, prévisualisez les formulaires, puis validez pour générer les documents à signer.</p>
+    </div>
+    {% if dossier %}<span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span>{% endif %}
+  </div>
+</div>
+
+{% if form.non_field_errors %}<div class="form-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+
+<form method="post" class="intake-layout" novalidate>
+  {% csrf_token %}
+
+  {# Rail latéral — colonne 1 #}
+  <aside class="section-rail">
+    <div class="rail-label">VOTRE PARCOURS</div>
+    <nav aria-label="Sections du dossier">
+      {% for section in sections %}
+        <a class="rail-link" href="#{{ section.anchor }}" {% if section.business %}data-business-nav{% endif %}>
+          <span class="rail-number">{{ forloop.counter|stringformat:"02d" }}</span>
+          <span>{{ section.title }}</span>
+        </a>
+      {% endfor %}
+    </nav>
+    <div class="rail-note">
+      <span class="rail-note-icon">i</span>
+      <p>Les brouillons peuvent être complétés ultérieurement.</p>
+    </div>
+  </aside>
+
+  {# Contenu — colonne 2 #}
+  <div class="intake-content">
+
+    {# Résumé d'erreurs : dans la colonne 2, au-dessus du contenu #}
+    {% if form.errors %}
+    <div class="error-summary" role="alert" tabindex="-1">
+      <strong>Vérifiez les champs signalés avant d'enregistrer :</strong>
+      <ul>
+        {% for field in form %}
+          {% for error in field.errors %}
+            <li><a href="#{{ field.id_for_label }}">{{ field.label }} : {{ error }}</a></li>
+          {% endfor %}
+        {% endfor %}
+        {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    <div class="privacy-note">
+      <span aria-hidden="true">◇</span>
+      <span>Les informations recueillies sont confidentielles et réservées au traitement interne du dossier.</span>
+    </div>
+
+    {% for section in sections %}
+      <section id="{{ section.anchor }}" class="form-section {% if section.business %}business-section{% endif %}" {% if section.business %}data-business-section{% endif %}>
+        <div class="section-heading">
+          <span class="section-index">{{ forloop.counter|stringformat:"02d" }}</span>
+          <div>
+            <h2>{{ section.title }}</h2>
+            {% if section.anchor == "identite" %}<p>Identité du client ou du représentant légal.</p>
+            {% elif section.anchor == "entreprise" %}<p>À renseigner pour un compte commercial.</p>
+            {% elif section.anchor == "coordonnees" %}<p>Les réponses de résidence, logement et nationalité sont demandées pour le KYC.</p>
+            {% elif section.anchor == "revenus" %}<p>Renseignez les montants et activités connus ; laissez vide ce qui ne s'applique pas.</p>
+            {% elif section.anchor == "relation" %}<p>Ces réponses complètent les rubriques d'entrée en relation, de procuration et d'antécédents bancaires.</p>
+            {% elif section.anchor == "famille" %}<p>Complétez les renseignements sur le conjoint et les enfants selon la situation du client.</p>
+            {% elif section.anchor == "conformite" %}<p>Déclarations à recueillir auprès du client.</p>
+            {% elif section.anchor == "consentements" %}<p>Formulaire de consentement CREDITINFO à lire au client et à faire confirmer.</p>
+            {% endif %}
+          </div>
+        </div>
+        <div class="field-grid">
+          {% for field in section.fields %}
+            <div class="field-wrap
+              {% if field.field.widget.input_type == 'checkbox' %}field-checkbox{% endif %}
+              {% if field.name in 'adresse,repere_proximite,pm_activite_principale,operations_habituelles,societes_administrees,societes_actionnaire,autres_comptes_bancaires,enfants_noms,procuration_details,parrainage_tiers,client_introduit_par' %}field-wide{% endif %}">
+              {% if field.field.widget.input_type == "checkbox" %}
+                <label class="checkbox-label">{{ field }}<span>{{ field.label }}</span></label>
+              {% else %}
+                {{ field.label_tag }}
+                {{ field }}
+              {% endif %}
+              {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+              {% if field.errors %}<small id="{{ field.id_for_label }}-errors" class="field-error">{{ field.errors|join:", " }}</small>{% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </section>
+    {% endfor %}
+
+    <div class="form-endnote">
+      <span>✓</span> Les signatures et les choix de consentement restent à compléter par le client sur les documents imprimés.
+    </div>
+
+  </div>{# /intake-content #}
+
+  <div class="form-actions">
+    <a class="button button-quiet" href="{% if dossier %}{% url 'recueil:dossier-detail' dossier.pk %}{% else %}{% url 'recueil:dossier-list' %}{% endif %}">Annuler</a>
+    <button class="button button-outline" type="submit" name="action" value="draft">Enregistrer le brouillon</button>
+    <button class="button button-primary" type="submit" name="action" value="preview">
+      <span aria-hidden="true">👁</span> Prévisualiser les formulaires
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+{% block scripts %}<script src="{% static 'recueil/app.js' %}?v=2" defer></script>{% endblock %}

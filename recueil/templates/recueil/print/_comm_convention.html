@@ -1,0 +1,106 @@
+{# Convention de compte courant — Articles 1 à 12 #}
+<section class="page comm-convention">
+  <h2 style="font-size:11pt; margin-bottom:5mm;">ENTRE LES SOUSSIGNÉS</h2>
+
+  <p style="text-align:justify;">
+    1°/ Monsieur <span class="val" style="display:inline-block;min-width:80mm;"></span> au nom et pour le compte de la société anonyme au capital de <strong>DIX SEPT MILLIARDS DEUX CENT SEPT MILLIONS CINQ CENT MILLES (17 207 500 000)</strong> de francs CFA, dénommée <strong>" BANQUE COMMERCIALE DU BURKINA "</strong>, en abrégé <strong>" BCB "</strong>, dont le siège social est à Ouagadeougou, 653, Avenue du Docteur Kwamé N'krumah, 01 B.P. 1336, en sa qualité de <span class="val" style="display:inline-block;min-width:50mm;"></span> de ladite banque, immatriculée au Registre du Commerce et du Crédit Mobilier sous le numéro BF OUA 2018M1613 ;
+  </p>
+
+  <p style="font-weight:bold;">La "BANQUE COMMERCIALE DU BURKINA" ci-après dénommée : "La BANQUE" ou "La BCB"</p>
+
+  <p style="text-align:justify;">
+    2°/ Monsieur / Madame/Mademoiselle <span class="val" style="display:inline-block;min-width:70mm;">{{ dossier.nom }} {{ dossier.prenoms }}</span><br>
+    Né(e) le <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.date_naissance|date:"d/m/Y" }}</span>, à <span class="val" style="display:inline-block;min-width:40mm;">{{ dossier.lieu_naissance }}</span><br>
+    Titulaire de la Carte d'Identité Burkinabé n° <span class="val" style="display:inline-block;min-width:35mm;">{{ dossier.numero_piece }}</span> délivrée à <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.piece_delivree_a }}</span><br>
+    Le <span class="val" style="display:inline-block;min-width:25mm;">{{ dossier.piece_delivree_le|date:"d/m/Y" }}</span> par le <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.piece_delivree_par }}</span>
+  </p>
+
+  <p style="font-style:italic; margin:3mm 0;">OU</p>
+  <p style="text-align:justify;">
+    De nationalité <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.nationalite }}</span> Titulaire du passeport n° <span class="val" style="display:inline-block;min-width:30mm;"></span><br>
+    délivré à <span class="val" style="display:inline-block;min-width:30mm;"></span>...Par le <span class="val" style="display:inline-block;min-width:30mm;"></span> Le <span class="val" style="display:inline-block;min-width:25mm;"></span>
+  </p>
+  <p style="text-align:justify;">
+    Agissant au nom en qualité de <span class="val" style="display:inline-block;min-width:40mm;">{{ dossier.pm_fonction_mandataire }}</span> et pour le compte de la société anonyme ou société à responsabilité limitée dont les caractéristiques sont les suivantes :
+  </p>
+
+  <div class="row"><span class="lbl" style="min-width:60mm;">Dénomination de la société titulaire du compte :</span><span class="val">{{ dossier.pm_raison_sociale }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Capital social :</span><span class="val">{% if dossier.pm_capital_social %}{{ dossier.pm_capital_social|floatformat:0 }} FCFA{% endif %}</span></div>
+  <div class="row">
+    <span class="lbl">Siège social : rue</span><span class="val" style="max-width:35mm;">{{ dossier.pm_secteur_rue }}</span>
+    <span class="lbl">Secteur n°</span><span class="val" style="max-width:20mm;"></span>
+    <span class="lbl">B.P</span><span class="val" style="max-width:20mm;"></span>
+    <span class="lbl">Ville</span><span class="val">{{ dossier.pm_siege_social }}</span>
+  </div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Objet social :</span><span class="val">{{ dossier.pm_activite_principale }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Numéro d'immatriculation au RCCM :</span><span class="val">{{ dossier.pm_numero_rccm }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Date d'immatriculation au RCCM :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Date du procès-verbal de nomination :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Références pouvoirs spéciaux :</span><span class="val"></span></div>
+
+  <div style="margin:4mm 0; text-align:center;"><span class="gras">DENOMINATION SOCIALE</span><br><span>Ci-après dénommée <strong>" LE CLIENT "</strong></span></div>
+  <div style="margin-bottom:4mm; font-weight:bold;">Ont convenu et arrêté ce qui suit :</div>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art.1 : OUVERTURE D'UN COMPTE COURANT</h3>
+  <p style="text-align:justify;">
+    Monsieur ou Madame <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.nom }} {{ dossier.prenoms }}</span><br>
+    Agissant en qualité de <span class="val" style="display:inline-block;min-width:40mm;">{{ dossier.pm_fonction_mandataire }}</span> demande à la BCB, l'ouverture d'un Compte dans ses livres au nom de ladite société.<br>
+    <strong>EN CONSÉQUENCE :</strong><br>
+    ❖ Les parties conviennent de faire entrer dans un compte courant unique les opérations qu'elles pourraient avoir à traiter ensemble. <strong>Le compte est ouvert sous le numéro :</strong> <span class="val" style="display:inline-block;min-width:30mm;"></span>
+  </p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 2 : PLURALITÉ DE COMPTES</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Si, pour la clarté et la commodité des relations entre les parties, plusieurs comptes étaient ouverts dans les livres de la BANQUE, tant au siège que dans des agences différentes, ces comptes devraient considérés comme des chapitres du compte courant unique et susceptibles d'être fusionnés. Il est précisé que ces différents chapitres forment un tout indivisible, quelle que soit la monnaie dans laquelle les comptes sont libellés et, qu'en conséquence, il y a de plein droit et à tout moment compensation entre tous les comptes.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 3 INTERÊTS-COMMISSIONS</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Jusqu'à la clôture du compte, les intérêts et commissions dus à la BANQUE y seront portés et en deviendront des articles. Les conditions d'intérêts et de commissions seront arrêtées de commun accord entre les parties et suivant la nature des opérations traitées.</p>
+</section>
+
+<section class="page comm-convention">
+  <p style="text-align:justify; font-size:8.5pt;">Le CLIENT déclare connaître les taux et commissions actuellement applicables et dont une copie est à sa disposition à tout moment à la BANQUE. Après la clôture du compte, les intérêts courront sur le solde au dernier taux appliqué lors de la clôture (majorité des taxes et impôts en vigueur) jusqu'à complet apurement du solde. Ils seront exigibles à tout instant.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 4 : DURÉE-CLÔTURE</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Le compte est ouvert pour une durée indéterminée. Il pourra être mis fin au compte courant à tout moment à la convenance du CLIENT ou de la BANQUE. En cas de redressement judiciaire ou liquidation des biens du CLIENT ou tout autre procédure collective similaire, la clôture du compte interviendra immédiatement.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 5 : PREUVE DES OPÉRATIONS DU COMPTE</h3>
+  <p style="text-align:justify; font-size:8.5pt;">L'envoi des relevés de compte par la BANQUE au domicile du CLIENT tel que stipulé ci-dessus vaut accord irrévocable par le CLIENT sur les écritures qui figureront sur lesdits relevés faute de protestations ou observations écrites du CLIENT dans le délai d'un (1) mois suivant la date portée sur les relevés. Le CLIENT s'engage en conséquence dès à présent à ne pas remettre en cause ultérieurement pour quelque motif que ce soit les écritures figurant sur lesdits relevés.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 6 : EXIGIBILITÉ</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Le solde du compte sera exigible dès sa clôture. A toute époque, la BANQUE ou le CLIENT pourra exiger la clôture du compte en adressant à l'autre partie une lettre recommandée avec accusé de réception.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art.7 : LIQUIDATION DES OPÉRATIONS EN COURS LORS DE LA CLOTURE</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Lors de la clôture, le solde ne sera établi que sous réserve de la liquidation des opérations en cours. D'une manière générale, la BANQUE pourra porter au débit du compte, après la clôture, toutes sommes susceptibles de lui être dues postérieurement à la clôture en vertu d'engagements quelconques du CLIENT, antérieurs à cette clôture. Le solde définitif du compte sera arrêté une fois cette liquidation effectuée et compte tenu de ses résultats.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 8 : GARANTIES</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Les sûretés constituées à la garantie des créances portées en compte courant subsisteront et leur effet sera reporté sur le solde débiteur du compte, tel que ce solde apparaîtra lors de la clôture. Les sûretés légales seront ainsi reportées au même titre que les sûretés conventionnelles.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 9 : IMPÔTS ET FRAIS</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Tous les impôts, frais, droits et taxes quelconques présents et à venir sur les intérêts et le principal des sommes portées en compte courant ou dues postérieurement à la clôture du compte seront à la charge du CLIENT sans aucune exception ni réserve. Tous les frais et droits des présentes et ceux qui en seront la suite et la conséquence seront également à sa charge. En cas de poursuite judiciaire, les frais de la procédure, notamment les honoraires d'avocats seront à sa charge.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 10 : DÉCLARATIONS</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Monsieur/Madame/Mademoiselle <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.nom }} {{ dossier.prenoms }}</span> agissant ès qualité déclare sous les peines de droit :<br>
+  - que <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.pm_raison_sociale }}</span> est régulièrement constituée et qu'il/elle a tous pouvoirs pour intervenir au présent acte, en son nom ;<br>
+  - que ladite société n'est l'objet d'aucune mesure susceptible d'affecter sa capacité de contracter ;<br>
+  - qu'elle n'est pas en état de redressement judiciaire, liquidation des biens, cessation de paiement ;<br>
+  - qu'il/elle n'est pas en état de faillite ou de banqueroute.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 11 : LITIGES-RÈGLEMENT DES DIFFÉRENDS</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Toutes les contestations nées à l'occasion de l'application de la présente convention relèveront de la compétence du Tribunal de Grande Instance de <span class="val" style="display:inline-block;min-width:40mm;"></span>.</p>
+
+  <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 12 : ÉLECTION DE DOMICILE</h3>
+  <p style="text-align:justify; font-size:8.5pt;">Pour l'exécution de la présente convention de compte courant les parties font élection de domicile, à savoir :<br>
+  - pour la BANQUE, en son siège ci-dessus indiqué.<br>
+  - Pour le CLIENT, à son adresse ci-dessus indiquée.</p>
+
+  <div style="margin-top:6mm;">
+    Fait à <span class="val" style="display:inline-block;min-width:50mm;"></span> Le <span class="val" style="display:inline-block;min-width:30mm;">{{ date_impression|date:"d/m/Y" }}</span>
+  </div>
+  <p style="font-size:8.5pt;">En deux exemplaires, dont un exemplaire pour le CLIENT.</p>
+
+  <div style="display:flex; justify-content:space-between; margin-top:12mm;">
+    <div style="font-weight:bold;">LA BANQUE</div>
+    <div style="font-weight:bold;">LE CLIENT</div>
+  </div>
+
+  <p style="margin-top:15mm; font-size:8pt; font-weight:bold;">NB : Faire précéder la signature de la mention "LU ET APPROUVÉ" et apposer le cachet séparément.</p>
+</section>

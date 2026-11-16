@@ -1,0 +1,36 @@
+{% extends "recueil/base.html" %}
+{% block title %}Recherche client · BCB Recueil Express{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> RÉUTILISATION SÉCURISÉE</div>
+    <h1>Rechercher un client</h1>
+    <p class="page-intro">La recherche exacte par numéro de pièce affiche uniquement l'identité minimale et le dossier le plus récent.</p>
+  </div>
+</section>
+<section class="form-section">
+  <form method="get" class="search-form">
+    <label for="numero-piece">Numéro de pièce d'identité</label>
+    <input id="numero-piece" type="search" name="numero_piece" value="{{ numero_piece }}" required>
+    <button class="button button-primary" type="submit">Rechercher</button>
+  </form>
+</section>
+{% if numero_piece %}
+  {% if resultat %}
+  <section class="form-section">
+    <h2>Dernier dossier correspondant</h2>
+    <dl class="synthesis-grid">
+      <div class="synthesis-value"><dt>Nom</dt><dd>{{ resultat.nom_complet }}</dd></div>
+      <div class="synthesis-value"><dt>Date de naissance</dt><dd>{{ resultat.date_naissance|date:"d/m/Y"|default:"—" }}</dd></div>
+      <div class="synthesis-value"><dt>Dossier</dt><dd>{{ resultat.reference }} · {{ resultat.maj_le|date:"d/m/Y" }}</dd></div>
+    </dl>
+    <form method="post" action="{% url 'recueil:dossier-reprendre' resultat.pk %}">
+      {% csrf_token %}
+      <button class="button button-primary" type="submit">Créer un nouveau dossier à partir de ces informations</button>
+    </form>
+  </section>
+  {% else %}
+  <div class="empty-state"><h2>Aucun dossier trouvé</h2><p>Vérifiez le numéro de pièce et réessayez.</p></div>
+  {% endif %}
+{% endif %}
+{% endblock %}

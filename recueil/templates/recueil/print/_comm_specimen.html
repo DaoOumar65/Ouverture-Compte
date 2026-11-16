@@ -1,0 +1,61 @@
+{# Carton de spécimen de signature #}
+<section class="page comm-specimen">
+  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:5mm;">
+    <div>
+      <div class="gras">BANQUE COMMERCIALE DU BURKINA</div>
+      <div style="margin-top:2mm;">CARTON DE SPÉCIMEN DE SIGNATURE</div>
+    </div>
+    <div style="display:flex; gap:3mm;">
+      <div style="border:1px solid #000; width:28mm; height:20mm;"></div>
+      <div style="border:1px solid #000; width:28mm; height:20mm;"></div>
+    </div>
+  </div>
+
+  <div class="row"><span class="lbl" style="min-width:38mm;">NOM DE LA SOCIÉTÉ :</span><span class="val">{{ dossier.pm_raison_sociale }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">COMPTE N° :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">OUAGA, LE :</span><span class="val">{{ date_impression|date:"d/m/Y" }}</span></div>
+
+  <table class="cadre" style="margin-top:5mm;">
+    <tr>
+      <td colspan="2" style="padding:2mm; background:#f0f0f0;">
+        <div class="gras">Clé BCEAO Personnes Morales</div>
+      </td>
+      <td style="border-left:1px solid #000; text-align:right; padding:2mm; font-size:9pt;">
+        /__/__/__/__/__/__/__/__/
+      </td>
+    </tr>
+    <tr>
+      <td colspan="2" style="padding:2mm; vertical-align:top;">
+        <div class="row"><span class="lbl">Lieu de création :</span><span class="val">{{ dossier.ville_residence }}</span></div>
+        <div class="row"><span class="lbl">Date de création :</span><span class="val"></span></div>
+        <div style="margin-top:2mm;"><span class="gras">Conditions particulières de fonctionnement :</span></div>
+        <div class="row"><span class="lbl">- Signataires :</span><span class="val">{{ dossier.nom }} {{ dossier.prenoms }}</span></div>
+        <div class="row"><span class="lbl">- Mode de fonctionnement :</span><span class="val">{{ dossier.pm_fonction_mandataire }}</span></div>
+      </td>
+      <td style="border-left:1px solid #000; padding:2mm; vertical-align:top; min-width:50mm;"></td>
+    </tr>
+    <tr style="background:#f0f0f0;">
+      <td style="padding:2mm;"><i class="cb"></i> MANDATAIRE 1</td>
+      <td style="border-left:1px solid #000; padding:2mm;"><i class="cb"></i> TITULAIRE 1</td>
+      <td style="border-left:1px solid #000; text-align:center; padding:2mm; font-weight:bold;">TYPE DE SIGNATURE</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="vertical-align:top; padding:2mm;">
+        <div class="row"><span class="lbl">NOM :</span><span class="val">{{ dossier.nom }}</span></div>
+        <div class="row"><span class="lbl">Prénoms :</span><span class="val">{{ dossier.prenoms }}</span></div>
+        <div class="row"><span class="lbl">Date et lieu de naissance :</span><span class="val">{{ dossier.date_naissance|date:"d/m/Y" }}, {{ dossier.lieu_naissance }}</span></div>
+        <div class="row"><span class="lbl">Passeport ou</span></div>
+        <div class="row"><span class="lbl">Carte d'identité N° :</span><span class="val">{{ dossier.numero_piece }}</span></div>
+        <div class="row"><span class="lbl">Délivré le :</span><span class="val">{{ dossier.piece_delivree_le|date:"d/m/Y" }}</span></div>
+        <div class="row"><span class="lbl">à :</span><span class="val">{{ dossier.piece_delivree_a }}</span></div>
+        <div class="row"><span class="lbl">Nationalité :</span><span class="val">{{ dossier.nationalite }}</span></div>
+        <div class="row"><span class="lbl">Profession :</span><span class="val">{{ dossier.pm_fonction_mandataire }}</span></div>
+        <div class="row"><span class="lbl">Adresse act :</span><span class="val">{{ adresse_domicile }}</span></div>
+        <div class="row"><span class="lbl">Téléphone :</span><span class="val">{{ dossier.telephone }}</span></div>
+        <div class="row"><span class="lbl">Part sociale :</span><span class="val"></span></div>
+      </td>
+      <td style="border-left:1px solid #000; padding:2mm; min-height:60mm; vertical-align:top; min-width:50mm;"></td>
+    </tr>
+  </table>
+  <div style="text-align:right; margin-top:2mm; font-size:8pt; font-style:italic;">VOIR AU VERSO</div>
+</section>

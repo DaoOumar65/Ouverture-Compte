@@ -1,0 +1,55 @@
+<section class="page f4">
+  {% include "recueil/print/_logo.html" %}
+
+  <h1>FICHE DE LOCALISATION CLIENT</h1>
+
+  <h2>I- <span>IDENTIFICATION DU CLIENT</span></h2>
+  <div class="row"><span class="lbl">Nom :</span><span class="val">{{ dossier.nom }}</span></div>
+  <div class="row"><span class="lbl">Prénom(s) :</span><span class="val">{{ dossier.prenoms }}</span></div>
+  <div class="row"><span class="lbl">Lieu de travail :</span><span class="val">{{ dossier.adresse_employeur }}</span></div>
+  <div class="row">
+    <span class="lbl">Tel 1 :</span><span class="val">{{ dossier.telephone }}</span>
+    <span class="lbl">Tel 2 :</span><span class="val">{{ dossier.telephone_secondaire }}</span>
+  </div>
+  <div class="row"><span class="lbl">Adresse :</span><span class="val">{{ adresse_domicile }}</span></div>
+  <div class="row">
+    <span class="lbl">Secteur :</span><span class="val">{{ dossier.secteur }}</span>
+    <span class="lbl">Quartier :</span><span class="val">{{ dossier.quartier }}</span>
+  </div>
+  <div class="row"><span class="lbl">Proximité :</span><span class="val">{{ dossier.repere_proximite }}</span></div>
+  <div class="row"><span class="lbl">Détail explicatif précis :</span><span class="val">{{ dossier.adresse }}</span></div>
+  <div class="row"><span class="val"></span></div>
+  <div class="row"><span class="val"></span></div>
+
+  <h2>II- <span>PERSONNE À PRÉVENIR EN CAS DE BESOIN</span></h2>
+  <div class="row"><span class="lbl">Nom et Prénoms :</span><span class="val">{{ dossier.urgence_nom_1 }}</span></div>
+  <div class="row"><span class="lbl">Profession :</span><span class="val">{{ dossier.urgence_prof_1 }}</span></div>
+  <div class="row"><span class="lbl">Lieu du travail :</span><span class="val">{{ dossier.urgence_lieu_travail_1 }}</span></div>
+  <div class="row">
+    <span class="lbl">Tel 1 :</span><span class="val">{{ dossier.urgence_tel_1 }}</span>
+    <span class="lbl">Tel 2 :</span><span class="val"></span>
+  </div>
+  <div class="row"><span class="lbl">Adresse :</span><span class="val">{{ dossier.urgence_adresse_1 }}</span></div>
+  <div class="row">
+    <span class="lbl">Secteur :</span><span class="val"></span>
+    <span class="lbl">Quartier :</span><span class="val"></span>
+  </div>
+  <div class="row"><span class="lbl">Détail explicatif précis :</span><span class="val"></span></div>
+  <div class="row"><span class="val"></span></div>
+
+  <h2>III- <span>DEUXIÈME PERSONNE À PRÉVENIR</span></h2>
+  <div class="row"><span class="lbl">Nom et Prénoms :</span><span class="val">{{ dossier.urgence_nom_2 }}</span></div>
+  <div class="row"><span class="lbl">Profession :</span><span class="val">{{ dossier.urgence_prof_2 }}</span></div>
+  <div class="row"><span class="lbl">Lieu du travail :</span><span class="val">{{ dossier.urgence_lieu_travail_2 }}</span></div>
+  <div class="row">
+    <span class="lbl">Téléphone :</span><span class="val">{{ dossier.urgence_tel_2 }}</span>
+    <span class="lbl">Adresse :</span><span class="val">{{ dossier.urgence_adresse_2 }}</span>
+  </div>
+
+  <p style="margin-top:8mm; text-align:justify;"><b>Je soussigné {{ nom_complet }}</b> <b>déclare exactes toutes les informations fournies ci-dessus, en foi de quoi, je signe ce document pour servir et valoir ce que de droit.</b></p>
+
+  <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-top:4mm;">
+    <div style="font-size:8pt; font-weight:bold;">NB : noter ou/au verso les informations ou les plans<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;permettant le repérage du domicile des bureaux<br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;de l'entreprise du client.</div>
+    <div style="font-weight:bold;">Fait le {{ date_impression|date:"d/m/Y" }}<br>Signature du client</div>
+  </div>
+</section>

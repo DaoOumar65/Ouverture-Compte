@@ -1,0 +1,50 @@
+{% extends "recueil/base.html" %}
+{% block title %}{{ dossier.reference }} · BCB Ouverture de compte{% endblock %}
+{% block content %}
+<div class="detail-toolbar no-print">
+  <a class="back-link" href="{% url 'recueil:dossier-list' %}">← Tous les dossiers</a>
+  {% if not is_admin and is_owner %}
+  <div class="detail-actions">
+    {% if not dossier.signe_le %}
+      <a class="button button-primary" href="{% url 'recueil:dossier-edit' dossier.pk %}"><span aria-hidden="true">✎</span> Modifier le dossier</a>
+    {% endif %}
+    {% if dossier.statut == "GENERE" %}
+      <a class="button button-outline" href="{% url 'recueil:dossier-print' dossier.pk %}"><span aria-hidden="true">⎙</span> Imprimer les formulaires</a>
+    {% endif %}
+    {% if dossier.statut == "GENERE" and not dossier.signe_le %}
+      <form method="post" action="{% url 'recueil:dossier-signer' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Marquer comme signé</button></form>
+    {% endif %}
+    <form method="post" action="{% url 'recueil:dossier-reprendre' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Nouveau dossier</button></form>
+  </div>
+  {% endif %}
+</div>
+{% if dossier.signe_le %}<div class="internal-warning"><strong>DOSSIER SIGNÉ</strong><span>Signé le {{ dossier.signe_le|date:"d/m/Y à H:i" }} par {{ dossier.signe_par|default:"—" }}. Les corrections doivent être apportées dans un nouveau dossier.</span></div>{% endif %}
+{% if dossier.derniere_impression_le and dossier.maj_le > dossier.derniere_impression_le %}<div class="internal-warning"><strong>ATTENTION — LA VERSION IMPRIMÉE N'EST PLUS À JOUR</strong><span>Le dossier a été modifié après sa dernière impression du {{ dossier.derniere_impression_le|date:"d/m/Y à H:i" }}.</span></div>{% endif %}
+<article class="synthesis">
+  <header class="synthesis-head">
+    <div class="synthesis-brand"><span class="brand-mark">B</span><span><strong>BCB</strong><small>BANQUE COMMERCIALE DU BURKINA</small></span></div>
+    <div class="synthesis-label"><span class="eyebrow"><span class="eyebrow-line"></span> DOCUMENT INTERNE</span><h1>Fiche d'ouverture de compte</h1><p>Support interne de préparation à la saisie dans Amplitude</p></div>
+    <div class="synthesis-ref"><span>RÉFÉRENCE DOSSIER</span><strong>{{ dossier.reference }}</strong><small>{{ dossier.cree_le|date:"d/m/Y" }}</small></div>
+  </header>
+  <div class="internal-warning"><strong>DOCUMENT INTERNE — NON OFFICIEL</strong><span>Cette synthèse ne constitue pas un formulaire bancaire officiel. Les formulaires officiels sont à compléter séparément.</span></div>
+  <div class="synthesis-meta">
+    <div><span>Profil</span><strong>{{ dossier.get_type_compte_display }}</strong></div>
+    <div><span>Formule demandée</span><strong>{{ dossier.get_formule_produit_display }}</strong></div>
+    <div><span>État du dossier</span><strong class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</strong></div>
+    <div><span>Dernière mise à jour</span><strong>{{ dossier.maj_le|date:"d/m/Y · H:i" }}</strong></div>
+    <div><span>Dernière impression</span><strong>{{ dossier.derniere_impression_le|date:"d/m/Y · H:i"|default:"—" }}{% if dossier.derniere_impression_par %} · {{ dossier.derniere_impression_par }}{% endif %}</strong></div>
+    {% if dossier.signe_le %}<div><span>Statut de signature</span><strong>Signé le {{ dossier.signe_le|date:"d/m/Y · H:i" }}</strong></div>{% endif %}
+  </div>
+  {% for section in sections %}
+  <section class="synthesis-section">
+    <h2>{{ section.title }}</h2>
+    <dl class="synthesis-grid">
+      {% for label,value in section.values %}
+        <div class="synthesis-value"><dt>{{ label }}</dt><dd>{{ value|default:"—" }}</dd></div>
+      {% endfor %}
+    </dl>
+  </section>
+  {% endfor %}
+  <footer class="synthesis-footer"><span>BCB · Banque Commerciale du Burkina · Usage interne uniquement</span><span>Imprimé le {% now "d/m/Y à H:i" %}</span></footer>
+</article>
+{% endblock %}

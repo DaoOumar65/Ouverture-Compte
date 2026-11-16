@@ -1,0 +1,213 @@
+{# ===== KYC PERSONNE MORALE — PAGE 1/3 ===== #}
+<section class="page comm-kyc-pm">
+  <div class="entete-kyc">
+    {% include "recueil/print/_logo.html" %}
+    <div class="bandeau">FICHE D'IDENTIFICATION DU CLIENT PERSONNE MORALE<br>KNOW YOUR CUSTOMER</div>
+  </div>
+
+  <table class="cadre" style="margin-bottom:4mm;">
+    <tr><td style="width:40%; font-style:italic;">Cadre réservé à la BCB</td><td></td></tr>
+    <tr><td>Agence</td><td>: {{ dossier.agence_snapshot }}</td></tr>
+    <tr><td>*Responsable de la relation</td><td>: {{ dossier.charge_affaires_snapshot }}</td></tr>
+    <tr><td>Date d'ouverture du compte</td><td>: {{ date_impression|date:"d/m/Y" }}</td></tr>
+  </table>
+
+  <div class="titre-section" style="margin:3mm 0;">IDENTIFICATION</div>
+
+  <div class="row" style="margin-bottom:2mm;"><span class="lbl" style="min-width:38mm;">Nature juridique :</span>
+    <span>SARL <i class="cb{% if etat.forme_sarl %} on{% endif %}"></i></span>
+    <span style="margin-left:5mm;">SA <i class="cb{% if etat.forme_sa %} on{% endif %}"></i></span>
+    <span style="margin-left:5mm;">ONG / Association <i class="cb{% if etat.forme_ong %} on{% endif %}"></i></span>
+  </div>
+  <div class="row" style="margin-left:38mm; margin-bottom:3mm;">
+    <span>Entreprise Individuelle <i class="cb{% if etat.forme_ei %} on{% endif %}"></i></span>
+    <span style="margin-left:5mm;">Autres <i class="cb{% if etat.forme_autre %} on{% endif %}"></i></span>
+    <span style="margin-left:3mm;">(préciser) <span class="val" style="min-width:30mm;">{% if etat.forme_autre %}{{ dossier.pm_forme_juridique }}{% endif %}</span></span>
+  </div>
+
+  <div class="row"><span class="lbl" style="min-width:38mm;">Activité :</span><span class="val">{{ dossier.pm_activite_principale }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">N° RCCM :</span><span class="val">{{ dossier.pm_numero_rccm }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Date de création :</span><span class="val"></span></div>
+  <div class="row">
+    <span class="lbl" style="min-width:38mm;">Appartenance à un Groupe :</span>
+    <span>Oui <i class="cb"></i></span>
+    <span style="margin-left:5mm;">Non <i class="cb"></i></span>
+  </div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">• Nom du groupe :</span><span class="val"></span></div>
+
+  <div style="margin-top:3mm; margin-bottom:1mm;"><span class="souligne gras">Adresse</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">• Postale :</span><span class="val">{{ dossier.pm_siege_social }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">• E-mail :</span><span class="val">{{ dossier.pm_email }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">• Géographique :</span><span class="val">{{ dossier.pm_secteur_rue }}</span></div>
+  <div class="row"><span class="val"></span></div>
+  <div class="row" style="font-size:8pt; color:#555;">Localisation géographique (joindre en annexe)</div>
+
+  <div style="margin-top:3mm; margin-bottom:1mm;"><span class="gras">Téléphone</span></div>
+  <div class="row">
+    <span class="lbl" style="min-width:38mm;">Bureau :</span><span class="val">{{ dossier.pm_telephone_bureau }}</span>
+    <span class="lbl" style="margin-left:5mm;">Fax :</span><span class="val"></span>
+  </div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Cel :</span><span class="val">{{ dossier.telephone }}</span></div>
+
+  <div style="margin-top:3mm; margin-bottom:1mm;"><span class="gras">Personne à contacter</span></div>
+  <div style="margin-left:5mm; margin-bottom:1mm;"><span class="souligne">• Au Burkina Faso</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Nom et prénom :</span><span class="val">{{ dossier.nom }} {{ dossier.prenoms }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Adresse :</span><span class="val">{{ adresse_domicile }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Domicile (ville ; lot ; quartier) :</span><span class="val">{{ dossier.quartier }}, {{ dossier.ville_residence }}</span></div>
+  <div class="row">
+    <span class="lbl" style="min-width:38mm;">Tél fixe :</span><span class="val">{{ dossier.telephone_domicile }}</span>
+    <span class="lbl" style="margin-left:5mm;">Cel :</span><span class="val">{{ dossier.telephone }}</span>
+  </div>
+
+  <div style="margin-top:3mm; margin-bottom:1mm; margin-left:5mm;"><span class="souligne">• Dans le pays de résidence (pour les clients de la diaspora)</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Pays de résidence :</span><span class="val">{{ dossier.pays_residence }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Nom et prénom :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Adresse postale :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Domicile (ville ; lot ; quartier) :</span><span class="val"></span></div>
+  <div class="row">
+    <span class="lbl" style="min-width:38mm;">Tél fixe :</span><span class="val"></span>
+    <span class="lbl" style="margin-left:5mm;">Cel :</span><span class="val"></span>
+  </div>
+
+  <div style="margin-top:3mm; margin-bottom:1mm;"><span class="gras">Références bancaires : (chez le confrère)</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Banque :</span><span class="val">{{ dossier.autres_comptes_bancaires }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Type de compte :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Numéro de compte :</span><span class="val"></span></div>
+
+  <div class="pied">1/3</div>
+</section>
+
+{# ===== KYC PERSONNE MORALE — PAGE 2/3 ===== #}
+<section class="page comm-kyc-pm">
+  <div style="margin-bottom:3mm; font-size:8pt; font-style:italic;">Date d'ouverture : {{ date_impression|date:"d/m/Y" }}</div>
+  <div class="titre-section" style="margin-bottom:4mm;">PATRIMOINE DE L'ENTREPRISE</div>
+
+  <div class="row">
+    <span class="lbl" style="min-width:38mm;">Biens immobiliers :</span>
+    <span>Oui <i class="cb"></i></span>
+    <span style="margin-left:20mm;">Non <i class="cb"></i></span>
+  </div>
+  <div class="row" style="margin-left:5mm; gap:8mm;">
+    <span>Nature : Immeuble <i class="cb"></i></span>
+    <span>Villa <i class="cb"></i></span>
+    <span>Terrain <i class="cb"></i></span>
+    <span>Autres : à préciser <span class="val" style="min-width:30mm;"></span></span>
+  </div>
+  <div class="row">
+    <span class="lbl" style="min-width:38mm; margin-left:5mm;">Matériel roulant :</span>
+    <span>Oui <i class="cb"></i></span>
+    <span style="margin-left:20mm;">Non <i class="cb"></i></span>
+  </div>
+
+  <table class="cadre" style="margin:5mm 0;">
+    <tr>
+      <td colspan="3" style="font-weight:bold; text-align:center; background:#f0f0f0; padding:1mm 2mm;">Cadre réservé à la BCB</td>
+    </tr>
+    <tr>
+      <td style="font-weight:bold; padding:1.5mm 2mm;">Visite effectuée</td>
+      <td colspan="2"></td>
+    </tr>
+    <tr>
+      <td style="padding:1.5mm 2mm;">A domicile le <span class="val" style="display:inline-block;min-width:20mm;"></span></td>
+      <td style="padding:1.5mm 2mm; border-left:1px solid #000;">Au travail le <span class="val" style="display:inline-block;min-width:20mm;"></span></td>
+      <td style="padding:1.5mm 2mm; border-left:1px solid #000;">Autres (à préciser) <span class="val" style="display:inline-block;min-width:20mm;"></span></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="font-weight:bold; padding:1.5mm 2mm; border-top:1px solid #000;">Entrée en relation :</td>
+    </tr>
+    <tr>
+      <td style="padding:1.5mm 2mm;">Initiative du client <i class="cb"></i></td>
+      <td style="padding:1.5mm 2mm; border-left:1px solid #000;">Prospect <i class="cb"></i></td>
+      <td style="padding:1.5mm 2mm; border-left:1px solid #000;">Recommandé par : <span class="val" style="display:inline-block;min-width:25mm;">{{ dossier.client_introduit_par }}</span></td>
+    </tr>
+    <tr>
+      <td colspan="3" style="padding:1.5mm 2mm; border-top:1px solid #000;">Informations recueillies par M. Mme Mlle : <span class="val" style="display:inline-block;min-width:60mm;">{{ dossier.charge_affaires_snapshot }}</span></td>
+    </tr>
+  </table>
+
+  <div style="margin-bottom:3mm;"><span class="souligne gras">Principaux actionnaires/associés</span></div>
+  <table class="cadre">
+    <tr style="background:#f0f0f0;">
+      <td style="width:28%;">Nom, prénoms / Raison sociale</td>
+      <td style="width:15%; border-left:1px solid #000;">Fonction</td>
+      <td style="width:15%; border-left:1px solid #000;">Forme de la société</td>
+      <td style="width:15%; border-left:1px solid #000;">% capital détenu</td>
+      <td style="border-left:1px solid #000;">Nature et numéro pièces d'identité</td>
+    </tr>
+    <tr><td style="height:8mm;">{{ dossier.pm_actionnaire_1 }}</td><td style="border-left:1px solid #000;"></td><td style="border-left:1px solid #000;"></td><td style="border-left:1px solid #000;"></td><td style="border-left:1px solid #000;"></td></tr>
+    <tr><td style="height:8mm; border-top:1px solid #000;">{{ dossier.pm_actionnaire_2 }}</td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td></tr>
+    <tr><td style="height:8mm; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td></tr>
+    <tr><td style="height:8mm; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td></tr>
+  </table>
+
+  <div style="margin:4mm 0 3mm;"><span class="souligne gras">Principaux dirigeants</span></div>
+  <table class="cadre">
+    <tr style="background:#f0f0f0;">
+      <td style="width:22%;">Nom et Prénoms</td>
+      <td style="width:18%; border-left:1px solid #000;">Date et lieu de naissance</td>
+      <td style="width:15%; border-left:1px solid #000;">Fonction</td>
+      <td style="width:12%; border-left:1px solid #000;">Nationalité</td>
+      <td style="width:16%; border-left:1px solid #000;">Pays et ville de résidence</td>
+      <td style="border-left:1px solid #000;">Nature et numéro pièces d'identité</td>
+    </tr>
+    <tr>
+      <td style="height:9mm;">{{ dossier.nom }} {{ dossier.prenoms }}</td>
+      <td style="border-left:1px solid #000;">{{ dossier.date_naissance|date:"d/m/Y" }}, {{ dossier.lieu_naissance }}</td>
+      <td style="border-left:1px solid #000;">{{ dossier.pm_fonction_mandataire }}</td>
+      <td style="border-left:1px solid #000;">{{ dossier.nationalite }}</td>
+      <td style="border-left:1px solid #000;">{{ dossier.ville_residence }}, {{ dossier.pays_residence }}</td>
+      <td style="border-left:1px solid #000;">{{ dossier.get_type_piece_display }} {{ dossier.numero_piece }}</td>
+    </tr>
+    <tr><td style="height:9mm; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td></tr>
+    <tr><td style="height:9mm; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td><td style="border-left:1px solid #000; border-top:1px solid #000;"></td></tr>
+  </table>
+
+  <div class="pied">2/3</div>
+</section>
+
+{# ===== KYC PERSONNE MORALE — PAGE 3/3 ===== #}
+<section class="page comm-kyc-pm">
+  <div style="margin-bottom:4mm;"><span class="souligne gras">Chiffre d'affaires</span></div>
+  <table class="cadre" style="margin-bottom:5mm;">
+    <tr style="background:#f0f0f0;">
+      <td style="width:50%; padding:2mm;">Exercice précédent (préciser l'année)</td>
+      <td style="border-left:1px solid #000; padding:2mm;">Prévisionnel</td>
+    </tr>
+    <tr>
+      <td style="height:18mm; padding:2mm;">{% if dossier.pm_chiffre_affaires %}{{ dossier.pm_chiffre_affaires|floatformat:0 }} FCFA{% endif %}</td>
+      <td style="border-left:1px solid #000; padding:2mm;"></td>
+    </tr>
+  </table>
+
+  <div style="margin-bottom:3mm;"><span class="souligne gras">Principaux clients</span></div>
+  <table class="cadre" style="margin-bottom:5mm;">
+    <tr><td style="height:20mm;"></td></tr>
+  </table>
+
+  <div style="margin-bottom:3mm;"><span class="souligne gras">Principaux fournisseurs</span></div>
+  <table class="cadre" style="margin-bottom:8mm;">
+    <tr><td style="height:20mm;"></td></tr>
+  </table>
+
+  <div style="text-align:center; margin-bottom:8mm;">
+    Fait à <span class="val" style="display:inline-block;min-width:60mm;"></span>le <span class="val" style="display:inline-block;min-width:30mm;">{{ date_impression|date:"d/m/Y" }}</span>
+  </div>
+
+  <div style="margin-bottom:8mm;"><span class="souligne gras">Date et signature du (des) gérant (s)</span></div>
+  <div style="height:20mm;"></div>
+
+  <table class="cadre">
+    <tr style="background:#f0f0f0;">
+      <td style="width:33%; text-align:center; padding:2mm;">Signature de l'agent ayant reçu le client</td>
+      <td style="width:33%; border-left:1px solid #000; text-align:center; padding:2mm;">Commentaire du chargé clientèle</td>
+      <td style="border-left:1px solid #000; text-align:center; padding:2mm;">Validation du supérieur hiérarchique</td>
+    </tr>
+    <tr>
+      <td style="height:18mm;"></td>
+      <td style="border-left:1px solid #000;"></td>
+      <td style="border-left:1px solid #000;"></td>
+    </tr>
+  </table>
+
+  <div class="pied">3/3</div>
+</section>

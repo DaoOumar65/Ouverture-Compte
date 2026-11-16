@@ -1,0 +1,202 @@
+{% extends "recueil/base.html" %}
+{% block title %}{% if is_edit %}Modifier{% else %}Nouveau{% endif %} gestionnaire · BCB{% endblock %}
+
+{% block content %}
+<a class="back-link" href="{% url 'recueil:gestion-utilisateurs' %}">← Retour à la liste</a>
+
+<section class="page-heading heading-form">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION</div>
+    <h1>{% if is_edit %}Modifier le gestionnaire{% else %}Créer un gestionnaire{% endif %}</h1>
+    {% if is_edit %}<p class="page-intro">Compte : <strong>{{ gestionnaire.username }}</strong></p>{% endif %}
+  </div>
+</section>
+
+<form method="post" class="intake-layout" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors or profile_form.non_field_errors %}
+  <div class="error-summary" role="alert" tabindex="-1">
+    <strong>Veuillez corriger les erreurs ci-dessous.</strong>
+    <ul>
+      {% for error in form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+      {% for error in profile_form.non_field_errors %}<li>{{ error }}</li>{% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  {# Rail latéral #}
+  <nav class="section-rail" aria-label="Sections du formulaire">
+    <p class="rail-label">SECTIONS</p>
+    <a class="rail-link" href="#identite"><span class="rail-number">1</span> Identité &amp; accès</a>
+    <a class="rail-link" href="#rattachement"><span class="rail-number">2</span> Rattachement agence</a>
+    {% if is_edit %}
+    <a class="rail-link" href="#securite"><span class="rail-number">3</span> Mot de passe</a>
+    <a class="rail-link" href="#statut"><span class="rail-number">4</span> Statut du compte</a>
+    {% endif %}
+  </nav>
+
+  <div class="intake-content">
+
+    {# Section 1 — Identité #}
+    <section class="form-section" id="identite" scroll-margin-top="15px">
+      <div class="section-heading">
+        <div class="section-index">1</div>
+        <div>
+          <h2>Identité &amp; accès</h2>
+          <p>Informations d'identification du gestionnaire.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field-wrap">
+          <label for="{{ form.username.id_for_label }}">Identifiant de connexion <span style="color:var(--red)">*</span></label>
+          {{ form.username }}
+          {% if form.username.errors %}<span class="field-error" id="{{ form.username.id_for_label }}-errors">{{ form.username.errors|join:" " }}</span>{% endif %}
+          <span class="field-help">Utilisé pour la connexion. Sans espace, sans accent.</span>
+        </div>
+
+        <div class="field-wrap">
+          <label for="{{ form.email.id_for_label }}">Adresse email</label>
+          {{ form.email }}
+          {% if form.email.errors %}<span class="field-error">{{ form.email.errors|join:" " }}</span>{% endif %}
+        </div>
+
+        <div class="field-wrap">
+          <label for="{{ form.first_name.id_for_label }}">Prénom(s)</label>
+          {{ form.first_name }}
+          {% if form.first_name.errors %}<span class="field-error">{{ form.first_name.errors|join:" " }}</span>{% endif %}
+        </div>
+
+        <div class="field-wrap">
+          <label for="{{ form.last_name.id_for_label }}">Nom de famille</label>
+          {{ form.last_name }}
+          {% if form.last_name.errors %}<span class="field-error">{{ form.last_name.errors|join:" " }}</span>{% endif %}
+        </div>
+
+        <div class="field-wrap field-wide">
+          <label for="{{ profile_form.nom_affiche.id_for_label }}">Nom affiché dans l'application</label>
+          {{ profile_form.nom_affiche }}
+          {% if profile_form.nom_affiche.errors %}<span class="field-error">{{ profile_form.nom_affiche.errors|join:" " }}</span>{% endif %}
+          <span class="field-help">Apparaît sur les fiches KYC comme « Nom du Commercial (Chargé d'affaires) ».</span>
+        </div>
+
+      </div>
+    </section>
+
+    {# Section 2 — Rattachement agence #}
+    <section class="form-section" id="rattachement">
+      <div class="section-heading">
+        <div class="section-index">2</div>
+        <div>
+          <h2>Rattachement à une agence</h2>
+          <p>L'agence sera automatiquement enregistrée sur chaque dossier créé par ce gestionnaire.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+
+        <div class="field-wrap field-wide">
+          <label for="{{ profile_form.agence_liste.id_for_label }}">Agence <span style="color:var(--red)">*</span></label>
+          {{ profile_form.agence_liste }}
+          {% if profile_form.agence_liste.errors %}<span class="field-error">{{ profile_form.agence_liste.errors|join:" " }}</span>{% endif %}
+          <span class="field-help">Sélectionnez l'agence ou saisissez son nom s'il n'est pas dans la liste.</span>
+        </div>
+
+        <div class="field-wrap field-wide" id="wrap-agence-autre">
+          <label for="{{ profile_form.agence_autre.id_for_label }}">Préciser l'agence</label>
+          {{ profile_form.agence_autre }}
+          {% if profile_form.agence_autre.errors %}<span class="field-error">{{ profile_form.agence_autre.errors|join:" " }}</span>{% endif %}
+        </div>
+
+      </div>
+    </section>
+
+    {# Section 3 — Mot de passe (création et édition) #}
+    {% if is_edit %}
+    <section class="form-section" id="securite">
+      <div class="section-heading">
+        <div class="section-index">3</div>
+        <div>
+          <h2>Changer le mot de passe</h2>
+          <p>Laissez vide pour conserver le mot de passe actuel.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-wrap">
+          <label for="id_new_password1">Nouveau mot de passe</label>
+          <input type="password" name="new_password1" id="id_new_password1" class="form-control" autocomplete="new-password">
+          {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field-wrap">
+          <label for="id_new_password2">Confirmer le mot de passe</label>
+          <input type="password" name="new_password2" id="id_new_password2" class="form-control" autocomplete="new-password">
+          {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field-wrap field-wide">
+          <span class="field-help">12 caractères minimum. Mélangez lettres, chiffres et symboles.</span>
+        </div>
+      </div>
+    </section>
+
+    {# Section 4 — Statut #}
+    <section class="form-section" id="statut">
+      <div class="section-heading">
+        <div class="section-index">4</div>
+        <div>
+          <h2>Statut du compte</h2>
+          <p>Un compte désactivé ne peut plus se connecter.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-wrap field-wide field-checkbox">
+          <label class="checkbox-label">
+            {{ form.is_active }}
+            Compte actif (le gestionnaire peut se connecter)
+          </label>
+          {% if form.is_active.errors %}<span class="field-error">{{ form.is_active.errors|join:" " }}</span>{% endif %}
+        </div>
+      </div>
+    </section>
+
+    {% else %}
+    {# Création : mot de passe obligatoire #}
+    <section class="form-section" id="securite">
+      <div class="section-heading">
+        <div class="section-index">3</div>
+        <div>
+          <h2>Mot de passe initial</h2>
+          <p>Le gestionnaire pourra le changer lors de sa première connexion.</p>
+        </div>
+      </div>
+      <div class="field-grid">
+        <div class="field-wrap">
+          <label for="{{ password_form.new_password1.id_for_label }}">Mot de passe <span style="color:var(--red)">*</span></label>
+          {{ password_form.new_password1 }}
+          {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field-wrap">
+          <label for="{{ password_form.new_password2.id_for_label }}">Confirmer <span style="color:var(--red)">*</span></label>
+          {{ password_form.new_password2 }}
+          {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
+        </div>
+        <div class="field-wrap field-wide">
+          <span class="field-help">12 caractères minimum. Mélangez lettres, chiffres et symboles.</span>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+  </div>{# /intake-content #}
+
+  <div class="form-actions">
+    <a class="button button-quiet" href="{% url 'recueil:gestion-utilisateurs' %}">Annuler</a>
+    <button class="button button-primary" type="submit" name="action" value="save">
+      {% if is_edit %}Enregistrer les modifications{% else %}Créer le gestionnaire{% endif %}
+    </button>
+  </div>
+
+</form>
+{% endblock %}
+
+{% load static %}
+{% block scripts %}<script src="{% static 'recueil/app.js' %}"></script>{% endblock %}

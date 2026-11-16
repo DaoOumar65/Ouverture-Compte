@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>BCB – Prévisualisation avant validation</title>
+{% load static %}
+<style>
+  @page { size: A4; margin: 10mm 12mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { margin: 0; background: #e9e9e9; color: #000; font-family: Arial, Helvetica, sans-serif; font-size: 9.5pt; line-height: 1.25; }
+
+  /* ---- Barre d'action (jamais imprimée) ---- */
+  .barre-preview {
+    position: sticky; top: 0; z-index: 20;
+    background: #008B96; color: #fff;
+    padding: 0 20px;
+    display: flex; align-items: center; gap: 12px;
+    height: 60px;
+    box-shadow: 0 2px 10px rgb(0 0 0 / 25%);
+  }
+  .barre-preview .titre { font-size: 14px; font-weight: 600; flex: 1; }
+  .barre-preview .sous-titre { font-size: 11px; opacity: .8; display: block; font-weight: 400; }
+  .barre-preview form { display: contents; }
+  .btn-valider {
+    background: #fff; color: #008B96;
+    border: none; border-radius: 4px;
+    padding: 10px 22px; font-size: 13px; font-weight: 700;
+    cursor: pointer; white-space: nowrap;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .btn-valider:hover { background: #e0f4f5; }
+  .btn-corriger {
+    background: rgb(255 255 255 / 15%); color: #fff;
+    border: 1px solid rgb(255 255 255 / 40%); border-radius: 4px;
+    padding: 10px 18px; font-size: 13px; font-weight: 500;
+    cursor: pointer; white-space: nowrap; text-decoration: none;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-corriger:hover { background: rgb(255 255 255 / 25%); }
+  .sep { color: rgb(255 255 255 / 30%); font-size: 20px; }
+
+  /* ---- Pages ---- */
+  .page { width: min(210mm, calc(100vw - 32px)); min-height: 277mm; margin: 8mm auto; padding: 10mm 12mm; background: #fff; box-shadow: 0 1px 6px rgba(0,0,0,.3); break-after: page; page-break-after: always; }
+  @media print {
+    body { background: #fff; }
+    .barre-preview { display: none !important; }
+    .page { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; break-inside: avoid; page-break-inside: avoid; }
+    .page:last-of-type { break-after: auto; page-break-after: auto; }
+  }
+
+  /* ---- Éléments communs ---- */
+  .logo { display: flex; align-items: center; gap: 3mm; }
+  .logo-img { height: 12mm; width: auto; }
+  .logo .nom-banque { font-size: 7.5pt; font-weight: bold; }
+  .cb { display: inline-block; position: relative; width: 3.4mm; height: 3.4mm; border: .35mm solid #000; vertical-align: -0.7mm; margin: 0 1mm; background: #fff; }
+  .cb.on::after { content: "X"; position: absolute; left: 0; right: 0; top: -.15mm; text-align: center; font: bold 3.3mm/3.5mm Arial, sans-serif; }
+  .row { display: flex; align-items: baseline; gap: 1.5mm; margin: 1.1mm 0; }
+  .lbl { white-space: nowrap; }
+  .val { flex: 1; min-height: 4.2mm; border-bottom: 1px dotted #000; padding: 0 1mm; font-weight: bold; }
+  .souligne { text-decoration: underline; }
+  .gras { font-weight: bold; }
+  .cadre { width: 100%; border-collapse: collapse; }
+  .cadre td { border: 1px solid #000; padding: 1.5mm 2mm; vertical-align: top; }
+
+  /* ---- F1 ---- */
+  .f1 { font-family: "Times New Roman", Times, serif; font-size: 10.5pt; }
+  .f1 h1 { text-align: center; font-size: 14pt; text-decoration: underline; margin: 14mm 0 8mm; letter-spacing: .2mm; }
+  .f1 .cadre td.g { width: 31%; font-style: italic; font-weight: bold; text-transform: uppercase; vertical-align: middle; }
+  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 9.5pt; }
+  .f1 .cadre td { padding: .7mm 1mm; }
+  .f1 .cadre tr.h9 td { height: 6mm; padding: .5mm 1mm; vertical-align: middle; }
+  .f1 .cadre td .row { margin: .15mm 0; line-height: 1; }
+  .f1 .cadre td .val { min-height: 2.5mm; padding: 0 .5mm; }
+  .f1 .yn { display: flex; gap: 2mm; margin: .2mm 0; font-weight: bold; font-family: "Times New Roman", Times, serif; line-height: 1; }
+  .f1 .yn .q { width: 52mm; }
+  .f1 .yn .o { width: 20mm; }
+  .f1 .fleche::before { content: "\2192"; margin-right: 2mm; }
+
+  /* ---- F2 ---- */
+  .f2 { font-family: Calibri, Arial, Helvetica, sans-serif; font-size: 9.2pt; }
+  .f2 .entete { text-align: center; }
+  .f2 .entete .logo { justify-content: center; flex-direction: column; gap: 1mm; }
+  .f2 h1 { font-size: 10pt; text-align: center; margin: 4mm 0 5mm; }
+  .f2 .cons { display: flex; gap: 2mm; margin: 2.4mm 0; text-align: justify; }
+  .f2 .cons .cb { flex: none; margin-top: .6mm; }
+  .f2 .note { border-top: 1px solid #000; width: 55mm; margin-top: 10mm; padding-top: 1mm; font-size: 7.5pt; }
+  .f2 .bas { font-size: 7.5pt; }
+  .f2 .sig { margin-top: 4mm; }
+
+  /* ---- F3 ---- */
+  .f3 { font-size: 8.3pt; }
+  .f3 .row { margin: .7mm 0; }
+  .f3 .val { min-height: 3.6mm; }
+  .f3 .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
+  .f3 .entete-kyc .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 13pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
+  .f3 .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 11pt; padding: 1mm; margin: 2mm 1mm 3mm; }
+  .f3 .grille2 { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid #000; margin-top: 2mm; }
+  .f3 .grille2 > .col + .col { border-left: 1px solid #000; }
+  .f3 .cel { padding: 1.2mm 2mm; border-bottom: 1px solid #000; }
+  .f3 .cel:last-child { border-bottom: 0; }
+  .f3 .cel-titre { font-weight: bold; font-style: italic; }
+  .f3 .pied { text-align: center; font-weight: bold; margin-top: 4mm; }
+  .f3 .liste-cb div { margin: .8mm 0; }
+  .f3 p { margin: 1mm 0; text-align: justify; }
+
+  /* ---- F4 ---- */
+  .f4 { font-family: Arial, Helvetica, sans-serif; font-size: 10pt; }
+  .f4 h1 { text-align: center; font-size: 11pt; font-weight: normal; margin: 6mm 0 10mm; }
+  .f4 h2 { font-size: 10.5pt; font-weight: normal; margin: 8mm 0 5mm; }
+  .f4 h2 span { text-decoration: underline; margin-left: 12mm; }
+  .f4 .row { margin: 3.2mm 0; }
+  .f4 .val { font-weight: bold; }
+
+  /* ---- F5 ---- */
+  .f5 { border: .3mm solid #000; padding: 8mm; }
+  .f5 .cadre-plan { border: .3mm solid #000; height: 190mm; margin: 8mm 6mm 0; text-align: center; padding-top: 4mm; }
+  .f5 .cadre-plan span { text-decoration: underline; font-size: 12pt; }
+
+  /* ---- KYC PM ---- */
+  .comm-kyc-pm { font-size: 8.5pt; }
+  .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
+  .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 11pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
+  .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 10.5pt; padding: 1mm; margin: 2mm 1mm 3mm; }
+  .pied { text-align: center; font-weight: bold; margin-top: 4mm; }
+  .comm-specimen { font-size: 9pt; }
+  .comm-convention { font-size: 9pt; }
+  .comm-convention h3 { margin: 3mm 0 1mm; font-size: 9.5pt; }
+  .comm-cover { font-size: 9.5pt; }
+</style>
+</head>
+<body>
+
+{# Barre d'action sticky #}
+<div class="barre-preview">
+  <div class="titre">
+    Prévisualisation des formulaires
+    <span class="sous-titre">Vérifiez toutes les informations avant de valider. Aucune donnée n'a encore été enregistrée.</span>
+  </div>
+
+  {% if pk %}
+    {# Édition d'un dossier existant #}
+    <a class="btn-corriger" href="{% url 'recueil:dossier-edit' pk %}">← Corriger</a>
+    <span class="sep">|</span>
+    <form method="post" action="{% url 'recueil:dossier-edit' pk %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm">
+      <button type="submit" class="btn-valider">✓ Valider et enregistrer</button>
+    </form>
+  {% else %}
+    {# Création d'un nouveau dossier #}
+    <a class="btn-corriger" href="{% url 'recueil:dossier-create' %}">← Corriger</a>
+    <span class="sep">|</span>
+    <form method="post" action="{% url 'recueil:dossier-create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="confirm">
+      <button type="submit" class="btn-valider">✓ Valider et enregistrer</button>
+    </form>
+  {% endif %}
+</div>
+
+{# Formulaires #}
+{% if est_commercial %}
+  {% if 'cover' in choisis %}{% include "recueil/print/_comm_cover.html" %}{% endif %}
+  {% if 'kyc_pm' in choisis %}{% include "recueil/print/_comm_kyc_pm.html" %}{% endif %}
+  {% if 'f2' in choisis %}{% for n in copies_range %}{% include "recueil/print/_comm_f2.html" %}{% endfor %}{% endif %}
+  {% if 'f4' in choisis %}{% include "recueil/print/_comm_localisation.html" %}{% endif %}
+  {% if 'f5' in choisis %}{% include "recueil/print/_f5.html" %}{% endif %}
+  {% if 'f1' in choisis %}{% include "recueil/print/_f1.html" %}{% endif %}
+  {% if 'kyc_pp' in choisis %}{% include "recueil/print/_f3.html" %}{% endif %}
+  {% if 'specimen' in choisis %}{% include "recueil/print/_comm_specimen.html" %}{% endif %}
+  {% if 'convention' in choisis %}{% include "recueil/print/_comm_convention.html" %}{% endif %}
+{% else %}
+  {% if 'f1' in choisis %}{% include "recueil/print/_f1.html" %}{% endif %}
+  {% if 'f2' in choisis %}{% for n in copies_range %}{% include "recueil/print/_f2.html" %}{% endfor %}{% endif %}
+  {% if 'f3' in choisis %}{% include "recueil/print/_f3.html" %}{% endif %}
+  {% if 'f4' in choisis %}{% include "recueil/print/_f4.html" %}{% endif %}
+  {% if 'f5' in choisis %}{% include "recueil/print/_f5.html" %}{% endif %}
+{% endif %}
+
+</body>
+</html>

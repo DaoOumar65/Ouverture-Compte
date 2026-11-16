@@ -1,0 +1,51 @@
+{# F2 CREDITINFO — Personne Morale (répété N fois) #}
+<section class="page f2">
+  <div class="entete">{% include "recueil/print/_logo.html" %}</div>
+
+  <h1>FORMULAIRE TYPE D'OBTENTION DU CONSENTEMENT DANS LE CADRE DU SYSTÈME DE PARTAGE<br>D'INFORMATION SUR LE CRÉDIT DANS L'UMOA (PERSONNE MORALE)</h1>
+
+  <div class="row" style="justify-content:space-between; margin-bottom:3mm;">
+    <span>Établissement : <span class="val" style="display:inline-block;min-width:70mm;">{{ dossier.pm_raison_sociale }}</span></span>
+    <span>Date : {{ date_impression|date:"d/m/Y" }}</span>
+  </div>
+  <div class="row"><span class="lbl">Siège social :</span><span class="val">{{ dossier.pm_siege_social }}</span></div>
+  <div class="row">
+    <span class="lbl">Ville :</span><span class="val" style="flex:1.2;">{{ dossier.ville_residence }}</span>
+    <span class="lbl" style="margin-left:3mm;">Pays :</span><span class="val">{{ dossier.pays_residence }}</span>
+  </div>
+  <div class="row" style="margin-bottom:1mm;"><span class="lbl">Numéro de compte :</span><span class="val"></span></div>
+  <div class="row" style="margin-bottom:1mm;"><span class="lbl">Représenté par (Nom/Prénoms signataire) :</span><span class="val">{{ dossier.nom }} {{ dossier.prenoms }}</span></div>
+  <div class="cons" style="margin-bottom:4mm;"><i class="cb"></i><span class="lbl">En sa qualité de (Fonction) :</span><span class="val">{{ dossier.pm_fonction_mandataire }}</span></div>
+
+  <div class="cons"><i class="cb{% if etat.f2_transmission_credit_oui %} on{% endif %}"></i>
+    <span>Accepte que les informations de crédit, historiques et courantes, concernant <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.pm_raison_sociale }}</span> / notamment, les soldes approuvés et en souffrance, les limites de crédit, les cessations de paiement, le solde des arriérés auprès de la <b>Banque Commerciale du Burkina</b> soient transmises à <b>CREDITINFO Volo Bd. Général de Gaulle, Résidence Front Lagunaire, Plateau, BP 11 266 Abidjan 01 Côte d'Ivoire Tel. : (+225) 20225635</b> (Art 41 points 2, 3 et 4, Art. 44, points 1 et 2)<sup>1</sup>.</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_partage_credit_oui %} on{% endif %}"></i>
+    <span>Accepte que les informations précitées soient communiquées par <b>CREDITINFO Volo</b> aux établissements ayant accès à sa (leurs) base (s) de données, y compris ceux situés sur le territoire d'un État membre de l'UMOA, (<b>Art. 42 point 1, Art. 44, point 4</b>).</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_exclusion_depots_oui %} on{% endif %}"></i>
+    <span>Comprends que ces informations ne peuvent, en aucun cas, porter sur les dépôts de <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.pm_raison_sociale }}</span> / (<b>Art. 53, alinéa 3</b>).</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_limite_anciennete_oui %} on{% endif %}"></i>
+    <span>Comprends que <b>CREDITINFO Volo</b> ne diffusera (ont) que les informations dont l'ancienneté n'excède pas cinq (5) ans [<b>Art. 41, point 3</b>].</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_duree_conservation_oui %} on{% endif %}"></i>
+    <span>Comprends que <b>CREDITINFO Volo</b> conservera (ont) les informations de crédit pendant une durée de cinq (5) ans supplémentaire après la cessation de la relation d'affaires avec la <b>Banque Commerciale du Burkina</b>. (<b>Art. 41, point 4</b>).</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_droit_acces_oui %} on{% endif %}"></i>
+    <span>Comprends que <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.pm_raison_sociale }}</span> a le droit d'accès aux données le (la) concernant dans la (les) base (s) de données <b>CREDITINFO Volo</b> afin de vérifier ses historiques de crédit, de contester et faire corriger ou radier des informations erronées dans ladite (lesdites) base (s) ou dans un rapport de crédit (<b>Art. 44, point 7</b>).</span>
+  </div>
+
+  <div class="cons"><i class="cb{% if etat.f2_droit_rapport_oui %} on{% endif %}"></i>
+    <span>Comprends que <span class="val" style="display:inline-block;min-width:30mm;">{{ dossier.pm_raison_sociale }}</span> a le droit de recevoir toutes les informations conservées par <b>CREDITINFO Volo</b> sur son historique de crédit, sous la forme d'un rapport de crédit gratuitement une (1) fois par an et en cas de litige lié à une erreur dans les données, imputable à la <b>Banque Commerciale du Burkina</b> ou à <b>CREDITINFO Volo</b>, (<b>Art. 44, point 8</b>).</span>
+  </div>
+
+  <p class="sig" style="margin-top:8mm;">Signature (avec mention obligatoire "lu et approuvé")</p>
+  <div class="note"></div>
+  <p class="bas"><sup>1</sup> Loi N°013-2016/AN du 03 mai 2016 portant réglementation des bureaux d'information sur le crédit au Burkina Faso</p>
+</section>

@@ -1,0 +1,38 @@
+{% extends "recueil/base.html" %}
+{% load static %}
+{% block title %}Connexion · BCB Ouverture de compte{% endblock %}
+{% block content %}
+<section class="login-layout">
+  <div class="login-intro">
+    <div class="login-logo-wrap">
+      <img src="{% static 'recueil/bcb_logo.png' %}" alt="Logo BCB" class="login-logo">
+    </div>
+    <div class="eyebrow" style="margin-top:16px;"><span class="eyebrow-line"></span> ESPACE AGENCE</div>
+    <h1>Ouverture de compte<br><em>BCB</em></h1>
+    <p>Espace de travail interne confidentiel, réservé aux collaborateurs habilités de la Banque Commerciale du Burkina.</p>
+    <div class="login-ornament" aria-hidden="true">
+      <span>BCB</span><span>·</span><span>OUVERTURE DE COMPTE</span>
+    </div>
+  </div>
+  <div class="login-panel">
+    <span class="login-step">ACCÈS SÉCURISÉ</span>
+    <h2>Connexion</h2>
+    <p>Connectez-vous avec vos identifiants agence.</p>
+    {% if form.errors %}
+      <div class="form-alert" role="alert">Nom d'utilisateur ou mot de passe incorrect.</div>
+    {% endif %}
+    <form method="post" class="login-form">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
+      <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+      {{ form.username }}
+      <label for="{{ form.password.id_for_label }}">Mot de passe</label>
+      {{ form.password }}
+      <button type="submit" class="button button-primary">
+        Ouvrir ma session <span aria-hidden="true">→</span>
+      </button>
+    </form>
+    <small class="login-privacy">Sessions protégées. Ne partagez jamais vos identifiants.</small>
+  </div>
+</section>
+{% endblock %}
