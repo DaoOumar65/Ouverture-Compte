@@ -100,6 +100,7 @@ h1 { margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; font-si
 .date-cell { color: var(--ink); }
 .status { display: inline-flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 2px; color: var(--amber); background: var(--amber-bg); font-size: 10px; font-weight: 650; white-space: nowrap; }
 .status-genere { color: var(--green-dark); background: var(--green-light); }
+.status-cree { color: var(--bcb-teal-dark); background: var(--bcb-teal-light); }
 .status-brouillon .status-dot { background: #c19038; }
 .row-open { color: var(--green); font-size: 12px; font-weight: 650; text-decoration: none; }
 .row-open:hover { color: var(--green-dark); }

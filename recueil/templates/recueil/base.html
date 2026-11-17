@@ -50,7 +50,7 @@
         <span class="user-initial" aria-hidden="true">{{ user.get_username|slice:":1"|upper }}</span>
         <span class="user-name">
           {{ user.profile.nom_affiche|default:user.get_full_name|default:user.get_username }}
-          {% if user.profile.agence %}<small>{{ user.profile.agence }}</small>{% endif %}
+          {% if user.profile.agence %}<small>{{ user.profile.agence.nom }}</small>{% endif %}
         </span>
       </div>
 

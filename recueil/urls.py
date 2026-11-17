@@ -18,6 +18,7 @@ urlpatterns = [
     path("dossiers/<uuid:pk>/impression/marquer/", views.dossier_impression_marquer, name="dossier-impression-marquer"),
     path("dossiers/<uuid:pk>/signer/", views.dossier_signer, name="dossier-signer"),
     path("dossiers/<uuid:pk>/reprendre/", views.dossier_reprendre, name="dossier-reprendre"),
+    path("dossiers/<uuid:pk>/supprimer/", views.dossier_supprimer, name="dossier-supprimer"),
     path("dossiers/<uuid:pk>/", views.dossier_detail, name="dossier-detail"),
     path("dossiers/<uuid:pk>/modifier/", views.dossier_edit, name="dossier-edit"),
 ]

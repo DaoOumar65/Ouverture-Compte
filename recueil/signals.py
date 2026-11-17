@@ -4,7 +4,7 @@ from django.contrib.contenttypes.models import ContentType
 from django.db.models.signals import post_migrate, post_save
 from django.dispatch import receiver
 
-from .models import DossierAuditEvent, DossierClient, UserProfile
+from .models import Agence, DossierAuditEvent, DossierClient, UserProfile
 
 
 @receiver(post_save, sender=get_user_model())
@@ -26,6 +26,7 @@ def create_roles_and_permissions(sender, **kwargs):
     profile_ct = ContentType.objects.get_for_model(UserProfile)
     dossier_ct = ContentType.objects.get_for_model(DossierClient)
     audit_ct = ContentType.objects.get_for_model(DossierAuditEvent)
+    agence_ct = ContentType.objects.get_for_model(Agence)
 
     permission_specs = (
         (user_ct, ("view_user", "add_user", "change_user")),
@@ -33,6 +34,7 @@ def create_roles_and_permissions(sender, **kwargs):
         (profile_ct, ("view_userprofile", "add_userprofile", "change_userprofile")),
         (dossier_ct, ("view_dossierclient",)),
         (audit_ct, ("view_dossierauditevent",)),
+        (agence_ct, ("view_agence", "add_agence", "change_agence", "delete_agence")),
     )
     permission_ids = [
         permission.pk

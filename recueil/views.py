@@ -10,7 +10,7 @@ from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from .forms import DossierClientForm, new_dossier_reference
+from .forms import DossierClientForm, build_dossier_reference, new_dossier_reference
 from .models import DossierAuditEvent, DossierClient, UserProfile
 from .permissions import (
     ADMIN_GROUP,
@@ -261,7 +261,7 @@ def _journaliser(action, utilisateur, dossier=None, details=None):
 def _instantane_gestionnaire(request, dossier):
     profil, _ = UserProfile.objects.get_or_create(user=request.user)
     dossier.cree_par = request.user
-    dossier.agence_snapshot = profil.agence
+    dossier.agence_snapshot = profil.agence.nom if profil.agence else ""
     dossier.charge_affaires_snapshot = (
         profil.nom_affiche
         or request.user.get_full_name()
@@ -270,32 +270,38 @@ def _instantane_gestionnaire(request, dossier):
 
 
 def _dossier_accessible(request, pk):
-    dossiers = DossierClient.objects.all()
+    # Les désactivés (supprimés logiquement) ne sont jamais accessibles
+    dossiers = DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
     if not has_role(request.user, ADMIN_GROUP):
         dossiers = dossiers.filter(cree_par=request.user)
     return get_object_or_404(dossiers, pk=pk)
 
 
 def _enregistrer(request, form, action, nouveau):
-    """Enregistre le dossier en base. Le PDF figé PyMuPDF n'est plus utilisé."""
+    """Enregistre le dossier.
+    action='draft'   → statut BROUILLON
+    action='generate' → statut CREE (workflow : générer PDF puis valider)
+    """
     valeurs_initiales = dict(form.initial)
     dossier = form.save(commit=False)
+
     if nouveau:
-        dossier.reference = new_dossier_reference()
+        # Référence : brouillon d'abord avec UUID, puis on la met à jour à la validation
+        profil = getattr(request.user, "profile", None)
+        agence_numero = profil.agence.numero if (profil and profil.agence) else "0000"
+        numero_piece = form.cleaned_data.get("numero_piece", "") or ""
+        dossier.reference = build_dossier_reference(agence_numero, numero_piece)
         _instantane_gestionnaire(request, dossier)
 
     if action == "generate":
-        dossier.statut = DossierClient.Statut.GENERE
+        dossier.statut = DossierClient.Statut.CREE
     elif nouveau:
         dossier.statut = DossierClient.Statut.BROUILLON
 
     dossier.save()
+
     if nouveau:
-        _journaliser(
-            DossierAuditEvent.Action.CREATION,
-            request.user,
-            dossier,
-        )
+        _journaliser(DossierAuditEvent.Action.CREATION, request.user, dossier)
     else:
         modifications = {}
         for field_name, valeur_nouvelle in form.cleaned_data.items():
@@ -313,11 +319,7 @@ def _enregistrer(request, form, action, nouveau):
                 modifications,
             )
     if action == "generate":
-        _journaliser(
-            DossierAuditEvent.Action.GENERATION,
-            request.user,
-            dossier,
-        )
+        _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
     return dossier
 
 
@@ -326,46 +328,41 @@ def _enregistrer(request, form, action, nouveau):
 def dossier_list(request):
     query = request.GET.get("q", "").strip()
     status = request.GET.get("statut", "").strip()
-    dossiers = DossierClient.objects.all()
+    # Exclure les désactivés (supprimés logiquement) de la liste
+    dossiers = DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
     if not has_role(request.user, ADMIN_GROUP):
         dossiers = dossiers.filter(cree_par=request.user)
     if query:
         dossiers = dossiers.filter(
             Q(reference__icontains=query)
-            | Q(numero_piece__icontains=query)   # recherche par CNIB / numéro de pièce
+            | Q(numero_piece__icontains=query)
             | Q(nom__icontains=query)
             | Q(prenoms__icontains=query)
             | Q(pm_raison_sociale__icontains=query)
             | Q(pm_sigle__icontains=query)
         )
-    if status in DossierClient.Statut.values:
+    # Filtrer sur les statuts visibles (pas DESACTIVE)
+    statuts_visibles = [
+        s for s in DossierClient.Statut.choices
+        if s[0] != DossierClient.Statut.DESACTIVE
+    ]
+    if status in [s[0] for s in statuts_visibles]:
         dossiers = dossiers.filter(statut=status)
     page_obj = Paginator(dossiers, 20).get_page(request.GET.get("page"))
     return render(request, "recueil/dossier_list.html", {
         "page_obj": page_obj,
         "query": query,
         "status": status,
-        "status_choices": DossierClient.Statut.choices,
+        "status_choices": statuts_visibles,
         "is_admin": has_role(request.user, ADMIN_GROUP),
     })
 
 
-def _contexte_preview(dossier_tmp, request, pk=None):
-    """Construit le contexte de prévisualisation pour un dossier non encore enregistré."""
-    dossier_tmp.agence_snapshot = ""
-    dossier_tmp.charge_affaires_snapshot = ""
-    try:
-        profil = request.user.profile
-        dossier_tmp.agence_snapshot = profil.agence or ""
-        dossier_tmp.charge_affaires_snapshot = (
-            profil.nom_affiche or request.user.get_full_name() or request.user.get_username()
-        )
-    except Exception:
-        pass
-
-    contexte = _contexte_impression(dossier_tmp)
-    contexte["pk"] = pk  # None pour création, uuid pour édition
-    contexte["est_commercial"] = dossier_tmp.type_compte == DossierClient.TypeCompte.COMMERCIAL
+def _contexte_preview(dossier, request, pk=None):
+    """Construit le contexte de prévisualisation à partir d'un dossier déjà sauvegardé."""
+    contexte = _contexte_impression(dossier)
+    contexte["pk"] = pk if pk is not None else str(dossier.pk)
+    contexte["est_commercial"] = dossier.type_compte == DossierClient.TypeCompte.COMMERCIAL
     contexte["dossier_modifie_depuis_impression"] = False
     if contexte["est_commercial"]:
         codes = [code for code, _ in FORMULAIRES_IMPRIMABLES_COMM]
@@ -395,30 +392,34 @@ def dossier_create(request):
     action = request.POST.get("action", "draft") if request.method == "POST" else "draft"
 
     # ---- Confirmation après prévisualisation ----
+    # La preview sauvegarde maintenant en BROUILLON d'abord → plus de risque de perte session
     if action == "confirm":
-        encoded = request.session.pop("preview_data", None)
-        if not encoded:
+        pk = request.session.pop("preview_pk", None)
+        if not pk:
             messages.error(request, "Session expirée. Veuillez resaisir et générer à nouveau.")
             return redirect("recueil:dossier-create")
-        qd = QueryDict(encoded, mutable=False)
-        form = DossierClientForm(qd, generate=True)
-        if form.is_valid():
-            dossier = _enregistrer(request, form, "generate", nouveau=True)
-            messages.success(request, "Dossier enregistré et formulaires prêts pour impression.")
-            return redirect("recueil:dossier-print", pk=dossier.pk)
-        return render(request, "recueil/dossier_form.html", _form_context(form))
+        try:
+            dossier = DossierClient.objects.get(pk=pk, cree_par=request.user, statut=DossierClient.Statut.BROUILLON)
+        except DossierClient.DoesNotExist:
+            messages.error(request, "Dossier introuvable.")
+            return redirect("recueil:dossier-create")
+        dossier.statut = DossierClient.Statut.CREE
+        dossier.save(update_fields=["statut"])
+        _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
+        messages.success(request, "Dossier créé et formulaires prêts pour impression.")
+        return redirect("recueil:dossier-print", pk=dossier.pk)
 
-    form = DossierClientForm(request.POST or None, generate=action in ("generate", "preview"))
+    form = DossierClientForm(request.POST or None, generate=action == "preview")
     if request.method == "POST" and form.is_valid():
         if action == "preview":
-            # Stocker le POST encodé en session pour la confirmation
-            request.session["preview_data"] = request.POST.urlencode()
-            dossier_tmp = form.save(commit=False)
-            dossier_tmp.reference = "PRÉVISUALISATION"
-            contexte = _contexte_preview(dossier_tmp, request)
+            # Sauvegarder en brouillon AVANT la prévisualisation → données jamais perdues
+            dossier = _enregistrer(request, form, "draft", nouveau=True)
+            request.session["preview_pk"] = str(dossier.pk)
+            contexte = _contexte_preview(dossier, request)
             return render(request, "recueil/dossier_preview.html", contexte)
+        # Brouillon simple
         dossier = _enregistrer(request, form, "draft", nouveau=True)
-        messages.success(request, "Brouillon enregistré. Vous pourrez le compléter plus tard.")
+        messages.success(request, "Brouillon enregistré.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
     return render(request, "recueil/dossier_form.html", _form_context(form))
 
@@ -427,10 +428,13 @@ def dossier_create(request):
 @manager_required
 def dossier_edit(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    if dossier.supprime_le:
+        messages.error(request, "Ce dossier a été supprimé.")
+        return redirect("recueil:dossier-list")
     if dossier.signe_le:
         messages.error(
             request,
-            "Ce dossier est signé et figé. Utilisez « Nouveau dossier à partir de celui-ci » pour le corriger.",
+            "Ce dossier est signé et figé. Utilisez « Nouveau dossier » pour le corriger.",
         )
         return redirect("recueil:dossier-detail", pk=dossier.pk)
 
@@ -438,34 +442,27 @@ def dossier_edit(request, pk):
 
     # ---- Confirmation après prévisualisation ----
     if action == "confirm":
-        encoded = request.session.pop(f"preview_data_{pk}", None)
-        if not encoded:
-            messages.error(request, "Session expirée. Veuillez resaisir et générer à nouveau.")
-            return redirect("recueil:dossier-edit", pk=pk)
-        qd = QueryDict(encoded, mutable=False)
-        form = DossierClientForm(qd, instance=dossier, generate=True)
-        if form.is_valid():
-            dossier = _enregistrer(request, form, "generate", nouveau=False)
-            messages.success(request, "Dossier enregistré et formulaires prêts pour impression.")
-            return redirect("recueil:dossier-print", pk=dossier.pk)
-        return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
+        # Le dossier est déjà à jour en BD (mis à jour lors du preview)
+        if dossier.statut == DossierClient.Statut.BROUILLON:
+            dossier.statut = DossierClient.Statut.CREE
+            dossier.save(update_fields=["statut"])
+        _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
+        messages.success(request, "Dossier créé et formulaires prêts pour impression.")
+        return redirect("recueil:dossier-print", pk=dossier.pk)
 
     form = DossierClientForm(
         request.POST or None,
         instance=dossier,
-        generate=action in ("generate", "preview"),
+        generate=action == "preview",
     )
     if request.method == "POST" and form.is_valid():
         if action == "preview":
-            request.session[f"preview_data_{pk}"] = request.POST.urlencode()
-            dossier_tmp = form.save(commit=False)
-            contexte = _contexte_preview(dossier_tmp, request, pk=pk)
+            # Sauvegarder les modifications en BD avant d'afficher la preview
+            dossier = _enregistrer(request, form, "draft", nouveau=False)
+            contexte = _contexte_preview(dossier, request, pk=pk)
             return render(request, "recueil/dossier_preview.html", contexte)
         dossier = _enregistrer(request, form, "draft", nouveau=False)
-        messages.success(
-            request,
-            "Dossier mis à jour. Réimprimez les fiches si elles avaient déjà été imprimées.",
-        )
+        messages.success(request, "Dossier mis à jour.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
     return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
 
@@ -664,9 +661,28 @@ def _contexte_impression(dossier):
 
 @never_cache
 @manager_required
+@require_POST
+def dossier_supprimer(request, pk):
+    """Suppression logique d'un brouillon — masqué dans l'interface, traçable en BD."""
+    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    if dossier.statut != DossierClient.Statut.BROUILLON:
+        messages.error(request, "Seul un brouillon peut être supprimé.")
+        return redirect("recueil:dossier-detail", pk=dossier.pk)
+    dossier.statut = DossierClient.Statut.DESACTIVE
+    dossier.supprime_le = timezone.now()
+    dossier.supprime_par = request.user
+    dossier.save(update_fields=["statut", "supprime_le", "supprime_par"])
+    _journaliser(DossierAuditEvent.Action.SUPPRESSION, request.user, dossier)
+    messages.success(request, f"Le brouillon {dossier.reference} a été supprimé.")
+    return redirect("recueil:dossier-list")
+
+
+@never_cache
+@manager_required
 def dossier_print(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
-    if dossier.statut != DossierClient.Statut.GENERE:
+    # Accessible si CREE ou GENERE (GENERE pour compatibilité anciens dossiers)
+    if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
         messages.error(request, "Le dossier doit d'abord être généré.")
         return redirect("recueil:dossier-edit", pk=dossier.pk)
 
@@ -716,8 +732,8 @@ def dossier_print(request, pk):
 @require_POST
 def dossier_impression_marquer(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
-    if dossier.statut != DossierClient.Statut.GENERE:
-        return JsonResponse({"error": "Le dossier n'est pas généré."}, status=400)
+    if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
+        return JsonResponse({"error": "Le dossier n'est pas encore créé."}, status=400)
 
     dossier.derniere_impression_le = timezone.now()
     dossier.derniere_impression_par = request.user
@@ -731,8 +747,8 @@ def dossier_impression_marquer(request, pk):
 @require_POST
 def dossier_signer(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
-    if dossier.statut != DossierClient.Statut.GENERE:
-        messages.error(request, "Seul un dossier généré peut être marqué comme signé.")
+    if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
+        messages.error(request, "Seul un dossier créé peut être marqué comme signé.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
     if not dossier.signe_le:
         dossier.signe_le = timezone.now()
@@ -832,24 +848,25 @@ def gestionnaire_creer(request):
             user.is_active = True
             user.save()
 
-            # Rattacher au groupe GESTIONNAIRE
             groupe, _ = Group.objects.get_or_create(name="GESTIONNAIRE")
             user.groups.add(groupe)
 
-            # Mettre à jour le profil (créé automatiquement par le signal)
             profile = user.profile
             profile.nom_affiche = profile_form.cleaned_data.get("nom_affiche", "")
-            profile.agence = profile_form.agence
+            profile.agence = profile_form.cleaned_data.get("agence")
             profile.save()
 
             _journaliser(
                 DossierAuditEvent.Action.CREATION,
                 request.user,
-                details={"gestionnaire_cree": user.username, "agence": profile.agence},
+                details={
+                    "gestionnaire_cree": user.username,
+                    "agence": str(profile.agence) if profile.agence else "",
+                },
             )
             messages.success(
                 request,
-                f"Le gestionnaire « {user.username} » a été créé et rattaché à {profile.agence}.",
+                f"Le gestionnaire « {user.get_full_name() or user.username} » a été créé.",
             )
             return redirect("recueil:gestion-utilisateurs")
     else:
@@ -884,19 +901,13 @@ def gestionnaire_modifier(request, pk):
 
         if form.is_valid() and profile_form.is_valid() and password_form.is_valid():
             form.save()
-
             profile.nom_affiche = profile_form.cleaned_data.get("nom_affiche", "")
-            profile.agence = profile_form.agence
+            profile.agence = profile_form.cleaned_data.get("agence")
             profile.save()
-
             if password_form.has_new_password():
                 gestionnaire.set_password(password_form.cleaned_data["new_password1"])
                 gestionnaire.save(update_fields=["password"])
-
-            messages.success(
-                request,
-                f"Le gestionnaire « {gestionnaire.username} » a été mis à jour.",
-            )
+            messages.success(request, f"Le gestionnaire « {gestionnaire.get_full_name() or gestionnaire.username} » a été mis à jour.")
             return redirect("recueil:gestion-utilisateurs")
     else:
         form = GestionnaireUserForm(instance=gestionnaire)

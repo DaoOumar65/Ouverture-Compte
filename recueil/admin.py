@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group
 
-from .models import DossierAuditEvent, DossierClient, UserProfile
+from .models import Agence, DossierAuditEvent, DossierClient, UserProfile
 from .permissions import ADMIN_GROUP, has_role
 
 
@@ -91,3 +91,28 @@ class DossierAuditEventAdmin(ReadOnlyAdmin):
 admin_site.register(get_user_model(), UserAdmin)
 admin_site.register(UserProfile)
 admin_site.register(Group)
+
+
+@admin.register(Agence, site=admin_site)
+class AgenceAdmin(admin.ModelAdmin):
+    list_display = ("numero", "nom", "ville", "active", "nb_gestionnaires")
+    list_filter = ("active", "ville")
+    search_fields = ("nom", "numero", "ville")
+    ordering = ("numero",)
+    fields = ("numero", "nom", "ville", "active")
+
+    def nb_gestionnaires(self, obj):
+        return obj.gestionnaires.count()
+    nb_gestionnaires.short_description = "Gestionnaires"
+
+    def has_view_permission(self, request, obj=None):
+        return has_role(request.user, ADMIN_GROUP)
+
+    def has_add_permission(self, request):
+        return has_role(request.user, ADMIN_GROUP)
+
+    def has_change_permission(self, request, obj=None):
+        return has_role(request.user, ADMIN_GROUP)
+
+    def has_delete_permission(self, request, obj=None):
+        return has_role(request.user, ADMIN_GROUP)

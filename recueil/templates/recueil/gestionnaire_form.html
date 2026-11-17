@@ -96,16 +96,10 @@
       <div class="field-grid">
 
         <div class="field-wrap field-wide">
-          <label for="{{ profile_form.agence_liste.id_for_label }}">Agence <span style="color:var(--red)">*</span></label>
-          {{ profile_form.agence_liste }}
-          {% if profile_form.agence_liste.errors %}<span class="field-error">{{ profile_form.agence_liste.errors|join:" " }}</span>{% endif %}
-          <span class="field-help">Sélectionnez l'agence ou saisissez son nom s'il n'est pas dans la liste.</span>
-        </div>
-
-        <div class="field-wrap field-wide" id="wrap-agence-autre">
-          <label for="{{ profile_form.agence_autre.id_for_label }}">Préciser l'agence</label>
-          {{ profile_form.agence_autre }}
-          {% if profile_form.agence_autre.errors %}<span class="field-error">{{ profile_form.agence_autre.errors|join:" " }}</span>{% endif %}
+          <label for="{{ profile_form.agence.id_for_label }}">Agence <span style="color:var(--red)">*</span></label>
+          {{ profile_form.agence }}
+          {% if profile_form.agence.errors %}<span class="field-error">{{ profile_form.agence.errors|join:" " }}</span>{% endif %}
+          <span class="field-help">L'agence sera automatiquement enregistrée sur chaque dossier créé par ce gestionnaire.</span>
         </div>
 
       </div>

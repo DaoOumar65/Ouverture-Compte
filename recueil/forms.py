@@ -263,6 +263,25 @@ def new_dossier_reference():
     return f"BCB-{timezone.localdate():%Y}-{uuid.uuid4().hex[:8].upper()}"
 
 
+def build_dossier_reference(agence_numero, numero_piece):
+    """
+    Référence finale : BCB-{num_agence}-{CNIB_ou_passeport}-{ordre_padded}
+    Exemple : BCB-1001-B1234567-0042
+    Le numéro d'ordre est le compteur global de tous les dossiers (hors désactivés).
+    """
+    from .models import DossierClient
+    # Nettoyer la pièce : garder uniquement alphanumérique
+    piece_clean = "".join(c for c in (numero_piece or "") if c.isalnum()).upper()[:20]
+    if not piece_clean:
+        piece_clean = uuid.uuid4().hex[:8].upper()
+    # Numéro d'ordre global (hors désactivés)
+    ordre = DossierClient.objects.exclude(
+        statut=DossierClient.Statut.DESACTIVE
+    ).count() + 1
+    agence_num = str(agence_numero or "0000")
+    return f"BCB-{agence_num}-{piece_clean}-{ordre:04d}"
+
+
 # ---------------------------------------------------------------------------
 # Gestion des gestionnaires (création / modification par l'Admin)
 # ---------------------------------------------------------------------------
@@ -272,31 +291,15 @@ from django.contrib.auth.forms import SetPasswordForm
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
-from .models import UserProfile
+from .models import Agence, UserProfile
 
 
-# Agences connues de la BCB — liste extensible sans migration.
-AGENCES_BCB = [
-    ("", "— Choisir une agence —"),
-    ("Siège — Ouagadougou", "Siège — Ouagadougou"),
-    ("Agence Centrale — Ouagadougou", "Agence Centrale — Ouagadougou"),
-    ("Agence Paspanga", "Agence Paspanga"),
-    ("Agence Gounghin", "Agence Gounghin"),
-    ("Agence Zone du Bois", "Agence Zone du Bois"),
-    ("Agence Pissy", "Agence Pissy"),
-    ("Agence Tampouy", "Agence Tampouy"),
-    ("Agence Bobo-Dioulasso", "Agence Bobo-Dioulasso"),
-    ("Agence Bobo Secteur 22", "Agence Bobo Secteur 22"),
-    ("Agence Koudougou", "Agence Koudougou"),
-    ("Agence Banfora", "Agence Banfora"),
-    ("Agence Fada N'Gourma", "Agence Fada N'Gourma"),
-    ("Agence Kaya", "Agence Kaya"),
-    ("Agence Dédougou", "Agence Dédougou"),
-    ("Agence Ouahigouya", "Agence Ouahigouya"),
-    ("Agence Tenkodogo", "Agence Tenkodogo"),
-    ("Agence Réo", "Agence Réo"),
-    ("autre", "Autre (saisir ci-dessous)"),
-]
+def _agences_choices():
+    """Retourne les choix d'agences actives depuis la BD."""
+    choices = [("", "— Choisir une agence —")]
+    for agence in Agence.objects.filter(active=True).order_by("numero"):
+        choices.append((str(agence.pk), f"{agence.nom} ({agence.numero})"))
+    return choices
 
 
 class GestionnaireUserForm(forms.ModelForm):
@@ -316,74 +319,42 @@ class GestionnaireUserForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields["first_name"].label = "Prénom(s)"
+        self.fields["last_name"].required = True
         self.fields["last_name"].label = "Nom de famille"
+        self.fields["first_name"].required = True
         self.fields["email"].required = False
         self.fields["is_active"].label = "Compte actif"
         if not self.instance.pk:
-            # À la création, is_active est True par défaut — pas besoin de l'afficher
             self.fields.pop("is_active", None)
 
 
 class UserProfileForm(forms.ModelForm):
-    """Champs du profil BCB : nom affiché + agence."""
+    """Champs du profil BCB : nom affiché + agence (FK)."""
 
-    agence_liste = forms.ChoiceField(
-        choices=AGENCES_BCB,
-        required=False,
+    agence = forms.ModelChoiceField(
+        queryset=Agence.objects.filter(active=True).order_by("numero"),
+        required=True,
         label="Agence",
-        widget=forms.Select(attrs={"class": "form-control", "id": "id_agence_liste"}),
-    )
-    agence_autre = forms.CharField(
-        required=False,
-        label="Préciser l'agence",
-        widget=forms.TextInput(attrs={
-            "class": "form-control",
-            "id": "id_agence_autre",
-            "placeholder": "Nom de l'agence…",
-        }),
+        empty_label="— Choisir une agence —",
+        widget=forms.Select(attrs={"class": "form-control", "id": "id_agence"}),
     )
 
     class Meta:
         model = UserProfile
-        fields = ("nom_affiche",)
+        fields = ("nom_affiche", "agence")
         widgets = {
             "nom_affiche": forms.TextInput(attrs={"class": "form-control"}),
         }
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Préremplir la liste si l'agence actuelle est connue, sinon "autre"
-        if self.instance and self.instance.pk:
-            agence_actuelle = self.instance.agence or ""
-            valeurs_connues = [c[0] for c in AGENCES_BCB if c[0]]
-            if agence_actuelle in valeurs_connues:
-                self.fields["agence_liste"].initial = agence_actuelle
-            elif agence_actuelle:
-                self.fields["agence_liste"].initial = "autre"
-                self.fields["agence_autre"].initial = agence_actuelle
-
-    def clean(self):
-        cleaned = super().clean()
-        choix = cleaned.get("agence_liste", "")
-        autre = cleaned.get("agence_autre", "").strip()
-        if choix == "autre":
-            if not autre:
-                self.add_error("agence_autre", "Précisez le nom de l'agence.")
-            else:
-                cleaned["agence_resolue"] = autre
-        elif choix:
-            cleaned["agence_resolue"] = choix
-        else:
-            self.add_error("agence_liste", "Rattachez ce gestionnaire à une agence.")
-        return cleaned
-
-    @property
-    def agence(self):
-        return self.cleaned_data.get("agence_resolue", "")
+    def clean_agence(self):
+        agence = self.cleaned_data.get("agence")
+        if not agence:
+            raise forms.ValidationError("Rattachez ce gestionnaire à une agence.")
+        return agence
 
 
 class GestionnairePasswordForm(forms.Form):
-    """Formulaire de mot de passe avec validation Django."""
+    """Formulaire de mot de passe — 8 caractères minimum."""
 
     new_password1 = forms.CharField(
         label="Mot de passe",
@@ -411,10 +382,8 @@ class GestionnairePasswordForm(forms.Form):
             if p1 != p2:
                 self.add_error("new_password2", "Les deux mots de passe ne correspondent pas.")
             elif p1:
-                try:
-                    validate_password(p1)
-                except ValidationError as e:
-                    self.add_error("new_password1", e)
+                if len(p1) < 8:
+                    self.add_error("new_password1", "Le mot de passe doit comporter au moins 8 caractères.")
         return cleaned
 
     def has_new_password(self):

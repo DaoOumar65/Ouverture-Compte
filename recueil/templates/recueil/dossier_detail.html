@@ -8,11 +8,20 @@
     {% if not dossier.signe_le %}
       <a class="button button-primary" href="{% url 'recueil:dossier-edit' dossier.pk %}"><span aria-hidden="true">✎</span> Modifier le dossier</a>
     {% endif %}
-    {% if dossier.statut == "GENERE" %}
+    {% if dossier.statut == "CREE" or dossier.statut == "GENERE" %}
       <a class="button button-outline" href="{% url 'recueil:dossier-print' dossier.pk %}"><span aria-hidden="true">⎙</span> Imprimer les formulaires</a>
     {% endif %}
-    {% if dossier.statut == "GENERE" and not dossier.signe_le %}
-      <form method="post" action="{% url 'recueil:dossier-signer' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Marquer comme signé</button></form>
+    {% if dossier.statut == "CREE" or dossier.statut == "GENERE" %}
+      {% if not dossier.signe_le %}
+        <form method="post" action="{% url 'recueil:dossier-signer' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Marquer comme signé</button></form>
+      {% endif %}
+    {% endif %}
+    {% if dossier.statut == "BROUILLON" %}
+      <form method="post" action="{% url 'recueil:dossier-supprimer' dossier.pk %}"
+            onsubmit="return confirm('Supprimer ce brouillon ? Il restera traçable dans le journal d\'audit.')">
+        {% csrf_token %}
+        <button class="button button-outline" type="submit" style="color:var(--red);border-color:var(--red);">Supprimer le brouillon</button>
+      </form>
     {% endif %}
     <form method="post" action="{% url 'recueil:dossier-reprendre' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Nouveau dossier</button></form>
   </div>

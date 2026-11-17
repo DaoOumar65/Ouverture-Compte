@@ -5,6 +5,25 @@ from django.db import models
 from django.conf import settings
 
 
+class Agence(models.Model):
+    """Agence BCB avec son numéro officiel."""
+    nom = models.CharField("Nom de l'agence", max_length=150)
+    numero = models.CharField("Numéro d'agence", max_length=20, unique=True)
+    ville = models.CharField("Ville", max_length=80, default="Ouagadougou")
+    active = models.BooleanField("Active", default=True)
+
+    class Meta:
+        ordering = ["numero"]
+        verbose_name = "Agence"
+        verbose_name_plural = "Agences"
+
+    def __str__(self):
+        return f"{self.numero} — {self.nom}"
+
+    def label_complet(self):
+        return f"{self.nom} ({self.numero})"
+
+
 class DossierClient(models.Model):
     """Dossier d'ouverture unique représentant les informations recueillies auprès du client."""
 
@@ -21,7 +40,9 @@ class DossierClient(models.Model):
 
     class Statut(models.TextChoices):
         BROUILLON = "BROUILLON", "Brouillon (En cours)"
+        CREE = "CREE", "Créé"
         GENERE = "GENERE", "Généré & Prêt pour impression"
+        DESACTIVE = "DESACTIVE", "Désactivé"
 
     class CategorieClient(models.TextChoices):
         SALARIE_PRIVE = "SALARIE_PRIVE", "Salarié du privé"
@@ -89,6 +110,16 @@ class DossierClient(models.Model):
         blank=True,
         related_name="dossiers_signes",
         verbose_name="Signé par",
+    )
+    # Suppression logique : le brouillon reste en BD avec statut DESACTIVE
+    supprime_le = models.DateTimeField("Supprimé le", null=True, blank=True)
+    supprime_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dossiers_supprimes",
+        verbose_name="Supprimé par",
     )
 
     # =========================================================================
@@ -401,10 +432,25 @@ class UserProfile(models.Model):
         related_name="profile",
     )
     nom_affiche = models.CharField("Nom affiché", max_length=150, blank=True)
-    agence = models.CharField("Agence", max_length=120, blank=True)
+    agence = models.ForeignKey(
+        Agence,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="gestionnaires",
+        verbose_name="Agence",
+    )
 
     def __str__(self):
         return self.nom_affiche or self.user.get_username()
+
+    @property
+    def agence_nom(self):
+        return self.agence.nom if self.agence else ""
+
+    @property
+    def agence_numero(self):
+        return self.agence.numero if self.agence else ""
 
 
 class DossierAuditEvent(models.Model):
@@ -417,6 +463,7 @@ class DossierAuditEvent(models.Model):
         SIGNATURE = "SIGNATURE", "Signature"
         REUTILISATION = "REUTILISATION", "Réutilisation"
         RECHERCHE_CLIENT = "RECHERCHE_CLIENT", "Recherche client"
+        SUPPRESSION = "SUPPRESSION", "Suppression (brouillon)"
 
     dossier = models.ForeignKey(
         DossierClient,

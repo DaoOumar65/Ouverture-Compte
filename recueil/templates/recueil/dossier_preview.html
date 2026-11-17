@@ -139,22 +139,20 @@
   </div>
 
   {% if pk %}
-    {# Édition d'un dossier existant #}
     <a class="btn-corriger" href="{% url 'recueil:dossier-edit' pk %}">← Corriger</a>
     <span class="sep">|</span>
     <form method="post" action="{% url 'recueil:dossier-edit' pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="confirm">
-      <button type="submit" class="btn-valider">✓ Valider et enregistrer</button>
+      <button type="submit" class="btn-valider">✓ Valider et créer le dossier</button>
     </form>
   {% else %}
-    {# Création d'un nouveau dossier #}
     <a class="btn-corriger" href="{% url 'recueil:dossier-create' %}">← Corriger</a>
     <span class="sep">|</span>
     <form method="post" action="{% url 'recueil:dossier-create' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="confirm">
-      <button type="submit" class="btn-valider">✓ Valider et enregistrer</button>
+      <button type="submit" class="btn-valider">✓ Valider et créer le dossier</button>
     </form>
   {% endif %}
 </div>

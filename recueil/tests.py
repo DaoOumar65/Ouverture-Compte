@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.urls import reverse
 
 from .forms import DossierClientForm
-from .models import DossierAuditEvent, DossierClient, UserProfile
+from .models import Agence, DossierAuditEvent, DossierClient, UserProfile
 
 
 class DossierFlowTests(TestCase):
@@ -18,9 +18,13 @@ class DossierFlowTests(TestCase):
     def setUp(self):
         manager_group, _ = Group.objects.get_or_create(name="GESTIONNAIRE")
         self.user.groups.add(manager_group)
+        agence, _ = Agence.objects.get_or_create(
+            numero="1001",
+            defaults={"nom": "Siège", "ville": "Ouagadougou", "active": True},
+        )
         profile, _ = UserProfile.objects.get_or_create(user=self.user)
         profile.nom_affiche = "Conseiller Test"
-        profile.agence = "Ouagadougou"
+        profile.agence = agence
         profile.save()
         self.client.force_login(self.user)
 
@@ -62,7 +66,7 @@ class DossierFlowTests(TestCase):
     def test_generated_individual_dossier_can_print_selected_information_sheets(self):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-PRINT0001",
-            statut=DossierClient.Statut.GENERE,
+            statut=DossierClient.Statut.CREE,
             cree_par=self.user,
             nom="Kaboré",
             prenoms="Aïcha",
@@ -90,7 +94,7 @@ class DossierFlowTests(TestCase):
     def test_print_page_renders_all_information_sheets_by_default(self):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-PRINT0002",
-            statut=DossierClient.Statut.GENERE,
+            statut=DossierClient.Statut.CREE,
             cree_par=self.user,
             agence_snapshot="Ouagadougou",
             charge_affaires_snapshot="Conseiller Test",
@@ -132,7 +136,7 @@ class DossierFlowTests(TestCase):
     def test_print_maps_additional_personal_information_and_explicit_answers(self):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-PRINT0003",
-            statut=DossierClient.Statut.GENERE,
+            statut=DossierClient.Statut.CREE,
             cree_par=self.user,
             nom="Kaboré",
             prenoms="Aïcha",
@@ -197,7 +201,7 @@ class DossierFlowTests(TestCase):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-FOREIGN001",
             cree_par=other,
-            statut=DossierClient.Statut.GENERE,
+            statut=DossierClient.Statut.CREE,
             nom="Client",
             prenoms="Confidentiel",
             numero_piece="FOREIGN-123",
@@ -309,7 +313,7 @@ class DossierFlowTests(TestCase):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-LIFECYCLE1",
             cree_par=self.user,
-            statut=DossierClient.Statut.GENERE,
+            statut=DossierClient.Statut.CREE,
             nom="Kaboré",
             prenoms="Aïcha",
             numero_piece="LIFE-123",
@@ -354,7 +358,7 @@ class DossierFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 302)
         dossier.refresh_from_db()
-        self.assertEqual(dossier.statut, DossierClient.Statut.GENERE)
+        self.assertEqual(dossier.statut, DossierClient.Statut.CREE)
         self.assertEqual(dossier.nom, "Kaboré-Modifié")
         stale_page = self.client.get(
             reverse("recueil:dossier-print", args=[dossier.pk])
@@ -507,24 +511,25 @@ class DossierFlowTests(TestCase):
             "creditinfo_confirme": "on",
             "action": "preview",
         }
-        # Étape 1 : prévisualisation (rien n'est enregistré)
+        # Étape 1 : prévisualisation — sauvegarde en brouillon (fix bug session)
         preview = self.client.post(reverse("recueil:dossier-create"), data)
         self.assertEqual(preview.status_code, 200)
-        self.assertFalse(DossierClient.objects.exists())
-        # Étape 2 : confirmation → enregistrement
-        response = self.client.post(reverse("recueil:dossier-create"), {"action": "confirm"})
+        dossier_brouillon = DossierClient.objects.get()
+        self.assertEqual(dossier_brouillon.statut, DossierClient.Statut.BROUILLON)
+        # Étape 2 : confirmation → passe en CREE
+        response = self.client.post(
+            reverse("recueil:dossier-edit", args=[dossier_brouillon.pk]),
+            {"action": "confirm"},
+        )
         self.assertEqual(response.status_code, 302, response.content.decode())
         dossier = DossierClient.objects.get()
-        self.assertEqual(dossier.statut, DossierClient.Statut.GENERE)
+        self.assertEqual(dossier.statut, DossierClient.Statut.CREE)
         self.assertIsNone(dossier.pdf_fige)
-        self.assertEqual(
-            dossier.categorie_client,
-            DossierClient.CategorieClient.ACTIVITE_COMMERCIALE,
-        )
+        self.assertEqual(dossier.categorie_client, DossierClient.CategorieClient.ACTIVITE_COMMERCIALE)
         self.assertTrue(dossier.resident_bf)
         self.assertFalse(dossier.a_autre_nationalite)
         self.assertEqual(dossier.cree_par, self.user)
-        self.assertEqual(dossier.agence_snapshot, "Ouagadougou")
+        self.assertEqual(dossier.agence_snapshot, "Siège")
         self.assertEqual(dossier.charge_affaires_snapshot, "Conseiller Test")
         self.assertRedirects(response, reverse("recueil:dossier-print", args=[dossier.pk]))
         documents = self.client.get(response.url)
@@ -595,21 +600,26 @@ class DossierFlowTests(TestCase):
                 "f2_droit_rapport": "True",
                 "action": "preview",
             }
-        # Étape 1 : prévisualisation
+        # Étape 1 : prévisualisation — sauvegarde maintenant en brouillon (fix bug session)
         preview = self.client.post(reverse("recueil:dossier-create"), data)
         self.assertEqual(preview.status_code, 200)
-        self.assertFalse(DossierClient.objects.exists())
-        # Étape 2 : confirmation
-        response = self.client.post(reverse("recueil:dossier-create"), {"action": "confirm"})
+        # Le dossier est créé en BROUILLON après le preview
+        dossier_brouillon = DossierClient.objects.get()
+        self.assertEqual(dossier_brouillon.statut, DossierClient.Statut.BROUILLON)
+        # Étape 2 : confirmation → passe en CREE
+        response = self.client.post(
+            reverse("recueil:dossier-edit", args=[dossier_brouillon.pk]),
+            {"action": "confirm"},
+        )
         dossier = DossierClient.objects.get()
         self.assertRedirects(
             response, reverse("recueil:dossier-print", args=[dossier.pk])
         )
+        self.assertEqual(dossier.statut, DossierClient.Statut.CREE)
         self.assertEqual(dossier.pm_capital_social, 0)
         documents = self.client.get(response.url)
         self.assertEqual(documents.status_code, 200)
         self.assertEqual(documents["Content-Type"], "text/html; charset=utf-8")
-        # Vérifie les formulaires commerciaux clés
         self.assertContains(documents, "Savane Distribution")
         self.assertContains(documents, "FICHE D'IDENTIFICATION DU CLIENT PERSONNE MORALE")
         self.assertContains(documents, "CONSENTEMENT")
