@@ -27,7 +27,7 @@
 
   <div class="row"><span class="lbl" style="min-width:38mm;">Activité :</span><span class="val">{{ dossier.pm_activite_principale }}</span></div>
   <div class="row"><span class="lbl" style="min-width:38mm;">N° RCCM :</span><span class="val">{{ dossier.pm_numero_rccm }}</span></div>
-  <div class="row"><span class="lbl" style="min-width:38mm;">Date de création :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Date de création :</span><span class="val">{{ dossier.pm_date_creation|date:"d/m/Y" }}</span></div>
   <div class="row">
     <span class="lbl" style="min-width:38mm;">Appartenance à un Groupe :</span>
     <span>Oui <i class="cb"></i></span>

@@ -47,8 +47,8 @@
 
   /* ---- KYC PP (mandataire) : réutilise les styles F3 ---- */
   .f3 { font-size: 8.3pt; }
-  .f3 .row { margin: .7mm 0; }
-  .f3 .val { min-height: 3.6mm; }
+  .f3 .row { margin: .9mm 0; flex-wrap: wrap; }
+  .f3 .val { min-height: 4.2mm; padding: .4mm 1mm; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; }
   .f3 .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
   .f3 .entete-kyc .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 13pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
   .f3 .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 11pt; padding: 1mm; margin: 2mm 1mm 3mm; }
@@ -65,11 +65,11 @@
   .f1 { font-family: "Times New Roman", Times, serif; font-size: 10.5pt; }
   .f1 h1 { text-align: center; font-size: 14pt; text-decoration: underline; margin: 14mm 0 8mm; letter-spacing: .2mm; }
   .f1 .cadre td.g { width: 31%; font-style: italic; font-weight: bold; text-transform: uppercase; vertical-align: middle; }
-  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 9.5pt; }
-  .f1 .cadre td { padding: .7mm 1mm; }
-  .f1 .cadre tr.h9 td { height: 6mm; padding: .5mm 1mm; vertical-align: middle; }
-  .f1 .cadre td .row { margin: .15mm 0; line-height: 1; }
-  .f1 .cadre td .val { min-height: 2.5mm; padding: 0 .5mm; }
+  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 10pt; overflow-wrap: anywhere; }
+  .f1 .cadre td { padding: 1.4mm 2mm; }
+  .f1 .cadre tr.h9 td { min-height: 7mm; height: 7mm; padding: 1.2mm 2mm; vertical-align: middle; }
+  .f1 .cadre td .row { margin: .8mm 0; line-height: 1.15; }
+  .f1 .cadre td .val { min-height: 4mm; padding: .5mm 1mm; white-space: normal; overflow-wrap: anywhere; }
   .f1 .yn { display: flex; gap: 2mm; margin: .2mm 0; font-weight: bold; font-family: "Times New Roman", Times, serif; line-height: 1; }
   .f1 .yn .q { width: 52mm; }
   .f1 .yn .o { width: 20mm; }
@@ -91,8 +91,8 @@
   .f4 h1 { text-align: center; font-size: 11pt; font-weight: normal; margin: 6mm 0 10mm; }
   .f4 h2 { font-size: 10.5pt; font-weight: normal; margin: 8mm 0 5mm; }
   .f4 h2 span { text-decoration: underline; margin-left: 12mm; }
-  .f4 .row { margin: 3.2mm 0; }
-  .f4 .val { font-weight: bold; }
+  .f4 .row { margin: 3.2mm 0; flex-wrap: wrap; line-height: 1.25; }
+  .f4 .val { font-weight: bold; min-height: 5mm; padding: .7mm 1.5mm; white-space: normal; overflow-wrap: anywhere; }
 
   /* ---- F5 Plan ---- */
   .f5 { border: .3mm solid #000; padding: 8mm; }
@@ -109,6 +109,16 @@
   /* ---- Cover ---- */
   .comm-cover { font-size: 9.5pt; }
   .comm-cover .cadre-num { border: 1px solid #000; min-width: 38mm; min-height: 15mm; }
+  .comm-cover-intro { position: relative; padding: 12mm 12mm 18mm; }
+  .comm-cover-intro .bank-heading { text-align: center; font-family: "Times New Roman", serif; font-size: 13pt; margin-top: 5mm; }
+  .comm-cover-intro .bank-heading span { display: block; margin-top: 6mm; }
+  .comm-cover-intro .application-title { display: flex; align-items: center; gap: 6mm; margin-top: 34mm; }
+  .comm-cover-intro .application-title h1 { flex: 1; font-size: 13pt; }
+  .comm-cover-intro .cadre-num { width: 68mm; height: 22mm; }
+  .comm-cover-intro .company-box { margin: 35mm 5mm 0; padding: 2mm; border: 1px solid #000; font-size: 12pt; font-weight: bold; }
+  .comm-cover-intro .company-box > div { display: flex; gap: 2mm; margin: 2.5mm 0; }
+  .comm-cover-intro .company-box span { flex: 1; min-height: 7mm; border-bottom: 1px dotted #000; }
+  .comm-cover-intro .company-box > div:last-child span { max-width: 34mm; }
 
   @media screen and (max-width: 700px) {
     .barre-outils { gap: 8px; padding: 8px; }
@@ -128,10 +138,11 @@
   {% endfor %}
   <label>Exemplaires F2 <input type="number" name="copies" min="1" max="5" value="{{ copies }}" style="width:46px;"></label>
   <button type="submit">Appliquer</button>
-  <button type="button" class="imprimer" onclick="imprimerFiches()">Imprimer</button>
-  <a href="{% url 'recueil:dossier-detail' dossier.pk %}">Retour au dossier</a>
+  <button type="button" class="imprimer" onclick="imprimerFiches()">Imprimer / Télécharger PDF</button>
+  {% if en_generation %}<a href="{% url 'recueil:dossier-edit' dossier.pk %}">Corriger</a>{% else %}<a href="{% url 'recueil:dossier-detail' dossier.pk %}">Retour au dossier</a>{% endif %}
 </form>
 <form id="impression-csrf" hidden>{% csrf_token %}</form>
+{% if en_generation %}<form method="post" action="{% url 'recueil:dossier-confirmer' dossier.pk %}" class="barre-outils">{% csrf_token %}<strong>Les formulaires sont prêts</strong><button type="submit" class="imprimer">Enregistrer</button><a href="{% url 'recueil:dossier-edit' dossier.pk %}">Corriger</a></form>{% endif %}
 {% if dossier_modifie_depuis_impression %}
 <div style="display:flex; justify-content:space-between; gap:16px; padding:8px 14px; color:#6b521a; border:1px solid #eadcae; background:#fbf5e4; font-size:11px; margin:0 auto; max-width:210mm;">
   <strong>ATTENTION — LA VERSION IMPRIMÉE N'EST PLUS À JOUR</strong>

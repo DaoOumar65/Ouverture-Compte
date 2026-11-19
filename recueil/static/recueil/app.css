@@ -34,6 +34,28 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 
 .topbar { height: 68px; display: flex; align-items: center; gap: 0; padding: 0; background: var(--bcb-teal); border-bottom: none; box-shadow: 0 2px 8px rgb(0 0 0 / 18%); }
+.app-frame { min-height: calc(100vh - 68px); }
+.app-main { min-width: 0; }
+.app-frame-admin { display: flex; align-items: stretch; }
+.admin-sidebar { position: sticky; top: 0; display: flex; flex: 0 0 248px; flex-direction: column; width: 248px; height: calc(100vh - 68px); min-height: 550px; padding: 24px 14px 14px; background: #fff; border-right: 1px solid var(--line); }
+.admin-sidebar-heading { display: flex; align-items: center; gap: 11px; padding: 2px 10px 22px; border-bottom: 1px solid #edf1ef; }
+.admin-mark { display: grid; flex: 0 0 38px; place-items: center; width: 38px; height: 38px; color: #fff; background: var(--bcb-teal); border-radius: 7px; font-family: Georgia,serif; font-size: 20px; font-weight: 700; }
+.admin-sidebar-heading > span:last-child { display: flex; flex-direction: column; gap: 3px; }
+.admin-sidebar-heading strong { color: var(--ink); font-family: Georgia,serif; font-size: 15px; font-weight: 600; }
+.admin-sidebar-heading small { color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .11em; }
+.admin-nav-label { margin: 24px 10px 8px; color: #879590; font-size: 9px; font-weight: 750; letter-spacing: .13em; }
+.admin-nav-label-secondary { margin-top: 28px; }
+.admin-nav { display: grid; gap: 4px; }
+.admin-nav-link { display: flex; align-items: center; gap: 11px; min-height: 42px; padding: 0 11px; color: #536562; border: 1px solid transparent; border-radius: 5px; font-size: 12px; font-weight: 550; text-decoration: none; transition: color .15s, background .15s, border-color .15s; }
+.admin-nav-link:hover { color: var(--bcb-teal-dark); background: #f1f8f7; }
+.admin-nav-link.is-active { color: var(--bcb-teal-dark); background: var(--bcb-teal-light); border-color: #cce9e9; font-weight: 700; }
+.admin-menu-icon { display: grid; flex: 0 0 22px; place-items: center; width: 22px; height: 22px; color: var(--bcb-teal-dark); background: #f1f7f6; border-radius: 4px; font-size: 15px; }
+.admin-sidebar-foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding: 14px 10px 4px; color: var(--muted); border-top: 1px solid #edf1ef; font-size: 10px; }
+.admin-sidebar-foot-dot { width: 7px; height: 7px; background: #4a9a6f; border-radius: 50%; }
+.app-frame-admin .app-main { flex: 1; width: calc(100% - 248px); }
+.app-frame-admin .page-shell { width: min(1320px, calc(100% - 52px)); margin-top: 34px; }
+.app-frame-admin .messages { width: min(1320px, calc(100% - 52px)); }
+.app-frame-admin .site-footer { padding-right: 26px; padding-left: 26px; }
 .brand { display: inline-flex; gap: 12px; align-items: center; padding: 0 20px; height: 100%; text-decoration: none; border-right: 1px solid rgb(255 255 255 / 20%); flex-shrink: 0; }
 .brand-logo-wrap { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; background: #fff; border-radius: 6px; padding: 3px; flex-shrink: 0; }
 .brand-logo { width: 40px; height: 40px; object-fit: contain; display: block; }
@@ -158,6 +180,13 @@ textarea.form-control { min-height: 78px; resize: vertical; }
 .field-wrap ul li label:hover { border-color: var(--bcb-teal); color: var(--bcb-teal); background: var(--bcb-teal-light); }
 .field-wrap ul li input[type="radio"] { width: 15px; height: 15px; accent-color: var(--bcb-teal); cursor: pointer; }
 .field-wrap ul li:has(input[type="radio"]:checked) label { border-color: var(--bcb-teal); background: var(--bcb-teal-light); color: var(--bcb-teal-dark); font-weight: 650; }
+/* Django 5 renders RadioSelect as nested divs; keep options compact and aligned. */
+.field-wrap > div[id^="id_"] { display: flex; flex-wrap: wrap; gap: 9px; }
+.field-wrap > div[id^="id_"] > div { display: flex; align-items: center; }
+.field-wrap > div[id^="id_"] > div > label { display: inline-flex; align-items: center; gap: 7px; margin: 0; padding: 7px 14px; color: var(--ink-soft); border: 1px solid #c0d0d2; border-radius: 20px; background: #fff; font-size: 12px; font-weight: 500; cursor: pointer; transition: border-color .15s, background .15s, color .15s; }
+.field-wrap > div[id^="id_"] > div > label:hover { color: var(--bcb-teal-dark); border-color: var(--bcb-teal); background: var(--bcb-teal-light); }
+.field-wrap > div[id^="id_"] input[type="radio"] { width: 15px; height: 15px; min-height: 15px; margin: 0; padding: 0; accent-color: var(--bcb-teal); cursor: pointer; }
+.field-wrap > div[id^="id_"] label:has(input[type="radio"]:checked) { color: var(--bcb-teal-dark); border-color: var(--bcb-teal); background: var(--bcb-teal-light); font-weight: 650; }
 
 .form-endnote { display: flex; align-items: center; gap: 8px; margin: 18px 2px; color: var(--muted); font-size: 11px; }
 .form-endnote span { display: grid; place-items: center; width: 18px; height: 18px; color: var(--bcb-teal); background: var(--bcb-teal-light); border-radius: 50%; font-size: 11px; }
@@ -220,6 +249,18 @@ textarea.form-control { min-height: 78px; resize: vertical; }
 .login-form .button { margin-top: 13px; }
 .login-privacy { display: block; margin-top: 17px; color: var(--muted); font-size: 10px; }
 
+@media (max-width: 1000px) {
+  .app-frame-admin { display: block; }
+  .admin-sidebar { position: static; width: 100%; height: auto; min-height: 0; padding: 12px 18px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .admin-sidebar-heading { display: none; }
+  .admin-nav-label { display: none; }
+  .admin-nav { display: flex; gap: 5px; overflow-x: auto; }
+  .admin-nav-link { flex: 0 0 auto; min-height: 38px; padding: 0 10px; white-space: nowrap; }
+  .admin-sidebar-foot { display: none; }
+  .app-frame-admin .app-main { width: 100%; }
+  .app-frame-admin .page-shell { width: min(1190px, calc(100% - 36px)); margin-top: 28px; }
+  .app-frame-admin .messages { width: min(1190px, calc(100% - 36px)); }
+}
 @media (max-width: 850px) {
   .intake-layout { grid-template-columns: 1fr; }
   .section-rail { position: static; grid-column: 1; grid-row: auto; margin-bottom: 14px; padding: 12px; background: white; border: 1px solid var(--line); }
@@ -288,3 +329,20 @@ textarea.form-control { min-height: 78px; resize: vertical; }
   .internal-warning { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
   .synthesis-footer { margin-top: 15px; }
 }
+
+
+/* Choix du parcours de cr?ation */
+.type-choice-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; max-width:1100px; margin:28px auto; }
+.type-choice-card { display:flex; flex-direction:column; align-items:flex-start; gap:14px; padding:30px; border:1px solid #d7e0e2; border-radius:14px; background:#fff; color:inherit; text-decoration:none; box-shadow:0 8px 24px rgb(16 54 58 / 7%); }
+.type-choice-card:hover { border-color:#008b96; transform:translateY(-2px); }
+.type-choice-card strong { font-size:1.5rem; color:#123a40; }
+.type-choice-card > span:nth-of-type(2) { min-height:3em; color:#4c6165; }
+.type-choice-kicker { color:#007982; font-size:.76rem; font-weight:700; letter-spacing:.08em; }
+.type-choice-commercial { border-top:4px solid #bc8a2e; }
+@media(max-width:700px) { .type-choice-grid { grid-template-columns:1fr; } }
+
+.dossier-row-actions { display:flex; flex-wrap:wrap; gap:6px; min-width:245px; }
+.dossier-row-actions .button, .dossier-row-actions form button { min-height:32px; padding:0 10px; font-size:11px; }
+.dossier-row-actions form { margin:0; }
+.button-danger { border:1px solid #b42318; color:#b42318; background:#fff; cursor:pointer; }
+.button-danger:hover { color:#fff; background:#b42318; }

@@ -1,16 +1,29 @@
 import json
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator
+from django.db import transaction
 from django.db.models import Q
+from django.forms.models import model_to_dict
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
 
-from .forms import DossierClientForm, build_dossier_reference, new_dossier_reference
+from .forms import (
+    DossierClientForm,
+    DossierCommercialForm,
+    DossierParticulierForm,
+    GestionnairePasswordForm,
+    GestionnaireUserForm,
+    UserProfileForm,
+    build_dossier_reference,
+    new_dossier_reference,
+)
 from .models import DossierAuditEvent, DossierClient, UserProfile
 from .permissions import (
     ADMIN_GROUP,
@@ -31,7 +44,7 @@ FORM_SECTIONS = (
         "rccm_particulier",
     )),
     ("coordonnees", "Résidence & contact", (
-        "ville_residence", "pays_residence", "secteur", "quartier", "rue", "porte",
+        "ville_residence", "pays_residence", "pays_residence_fiscale", "secteur", "quartier", "rue", "porte",
         "repere_proximite", "adresse", "resident_bf", "statut_logement",
         "justificatif_domicile", "a_autre_nationalite", "autre_nationalite",
         "telephone", "telephone_secondaire", "telephone_domicile",
@@ -39,7 +52,7 @@ FORM_SECTIONS = (
     )),
     ("activite", "Activité professionnelle", (
         "categorie_client", "categorie_client_autre", "activite_commerciale", "profession", "employeur",
-        "adresse_employeur", "poste_occupe", "date_embauche", "revenu_mensuel",
+        "secteur_activite", "adresse_employeur", "poste_occupe", "date_embauche", "revenu_mensuel",
     )),
     ("revenus", "Autres revenus & opérations", (
         "revenus_immobiliers", "revenus_mobiliers", "recettes_commerciales",
@@ -64,12 +77,16 @@ FORM_SECTIONS = (
         "nombre_enfants", "enfants_noms",
         "urgence_nom_1", "urgence_tel_1", "urgence_prof_1",
         "urgence_lieu_travail_1", "urgence_adresse_1",
+        "urgence_tel_2_1", "urgence_secteur_1", "urgence_quartier_1",
+        "urgence_detail_1",
         "urgence_nom_2", "urgence_tel_2", "urgence_prof_2",
         "urgence_lieu_travail_2", "urgence_adresse_2",
     )),
     ("entreprise", "Entreprise & mandataire", (
         "pm_raison_sociale", "pm_sigle", "pm_forme_juridique",
-        "pm_activite_principale", "pm_numero_rccm", "pm_ifu", "pm_siege_social",
+        "pm_activite_principale", "pm_numero_rccm", "pm_date_creation",
+        "pm_date_enregistrement_rccm", "pm_date_nomination_mandataire",
+        "pm_ifu", "pm_siege_social",
         "pm_secteur_rue", "pm_telephone_bureau", "pm_email", "pm_capital_social",
         "pm_chiffre_affaires", "pm_actionnaire_1", "pm_actionnaire_2",
         "pm_fonction_mandataire",
@@ -81,6 +98,13 @@ FORM_SECTIONS = (
         "f2_transmission_credit", "f2_partage_credit", "f2_exclusion_depots",
         "f2_limite_anciennete", "f2_duree_conservation", "f2_droit_acces",
         "f2_droit_rapport", "creditinfo_confirme",
+    )),
+    ("controle-agent", "Contrôles KYC par le gestionnaire", (
+        "f3_fiche_creation", "f3_consultation_cip", "f3_consultation_amplitude",
+        "f3_risque_ppe", "f3_risque_revenus_multiples", "f3_risque_activite",
+        "f3_risque_autre", "f3_risque_autre_detail", "f3_risque_pays",
+        "f3_niveau_risque", "f3_niveau_risque_revision", "f3_niveau_profil",
+        "f3_agent_nom", "f3_agent_date_signature", "f3_chef_agence_nom",
     )),
 )
 
@@ -100,6 +124,7 @@ DETAIL_SECTIONS = (
     )),
     ("Résidence & contact", (
         ("Ville", "ville_residence"), ("Pays", "pays_residence"),
+        ("Pays de résidence fiscale", "pays_residence_fiscale"),
         ("Secteur", "secteur"), ("Quartier", "quartier"),
         ("Rue / Avenue", "rue"), ("Porte / Lot", "porte"), ("Repère", "repere_proximite"),
         ("Adresse", "adresse"), ("Résident au Burkina Faso", "resident_bf"),
@@ -116,7 +141,8 @@ DETAIL_SECTIONS = (
         ("Autre catégorie", "categorie_client_autre"),
         ("Activité commerciale", "activite_commerciale"),
         ("Profession", "profession"), ("Employeur", "employeur"),
-        ("Adresse de travail", "adresse_employeur"), ("Poste", "poste_occupe"),
+        ("Secteur d'activité", "secteur_activite"), ("Adresse de travail", "adresse_employeur"),
+        ("Poste", "poste_occupe"),
         ("Date d'embauche", "date_embauche"), ("Revenu mensuel (FCFA)", "revenu_mensuel"),
     )),
     ("Revenus & opérations", (
@@ -163,6 +189,10 @@ DETAIL_SECTIONS = (
         ("Urgence 1 — Nom", "urgence_nom_1"), ("Urgence 1 — Téléphone", "urgence_tel_1"),
         ("Urgence 1 — Profession", "urgence_prof_1"), ("Urgence 1 — Lieu de travail", "urgence_lieu_travail_1"),
         ("Urgence 1 — Adresse", "urgence_adresse_1"),
+        ("Urgence 1 - Telephone secondaire", "urgence_tel_2_1"),
+        ("Urgence 1 - Secteur", "urgence_secteur_1"),
+        ("Urgence 1 - Quartier", "urgence_quartier_1"),
+        ("Urgence 1 - Detail explicatif", "urgence_detail_1"),
         ("Urgence 2 — Nom", "urgence_nom_2"), ("Urgence 2 — Téléphone", "urgence_tel_2"),
         ("Urgence 2 — Profession", "urgence_prof_2"), ("Urgence 2 — Lieu de travail", "urgence_lieu_travail_2"),
         ("Urgence 2 — Adresse", "urgence_adresse_2"),
@@ -170,7 +200,11 @@ DETAIL_SECTIONS = (
     ("Entreprise & mandataire", (
         ("Raison sociale", "pm_raison_sociale"), ("Sigle", "pm_sigle"),
         ("Forme juridique", "get_pm_forme_juridique_display"), ("Activité principale", "pm_activite_principale"),
-        ("RCCM entreprise", "pm_numero_rccm"), ("IFU entreprise", "pm_ifu"),
+        ("RCCM entreprise", "pm_numero_rccm"),
+        ("Date de création", "pm_date_creation"),
+        ("Date d'enregistrement RCCM", "pm_date_enregistrement_rccm"),
+        ("Date de nomination du mandataire", "pm_date_nomination_mandataire"),
+        ("IFU entreprise", "pm_ifu"),
         ("Siège social", "pm_siege_social"), ("Adresse", "pm_secteur_rue"),
         ("Téléphone bureau", "pm_telephone_bureau"), ("Email société", "pm_email"),
         ("Capital social (FCFA)", "pm_capital_social"), ("Chiffre d'affaires annuel (FCFA)", "pm_chiffre_affaires"),
@@ -190,6 +224,23 @@ DETAIL_SECTIONS = (
         ("Comprend la durée de conservation des informations", "f2_duree_conservation"),
         ("Comprend son droit d'accès et de contestation", "f2_droit_acces"),
         ("Comprend son droit à un rapport de crédit gratuit", "f2_droit_rapport"),
+    )),
+    ("Contrôles KYC du gestionnaire", (
+        ("Fiche de création", "f3_fiche_creation"),
+        ("Consultation CIP", "f3_consultation_cip"),
+        ("Consultation AMPLITUDE", "f3_consultation_amplitude"),
+        ("Risque PPE", "f3_risque_ppe"),
+        ("Risque de revenus multiples", "f3_risque_revenus_multiples"),
+        ("Activité à risque", "f3_risque_activite"),
+        ("Autre raison de risque", "f3_risque_autre"),
+        ("Précision du risque", "f3_risque_autre_detail"),
+        ("Pays à risque", "f3_risque_pays"),
+        ("Niveau de risque", "get_f3_niveau_risque_display"),
+        ("Risque en cas de révision", "f3_niveau_risque_revision"),
+        ("Niveau de profil", "get_f3_niveau_profil_display"),
+        ("Gestionnaire de compte", "f3_agent_nom"),
+        ("Date de signature du gestionnaire", "f3_agent_date_signature"),
+        ("Chef d'agence", "f3_chef_agence_nom"),
     )),
 )
 
@@ -225,12 +276,29 @@ CHAMPS_NON_COPIES = {
     "f2_droit_rapport", "resident_bf", "a_autre_nationalite",
     "mandat_administrateur", "est_actionnaire", "entree_relation_directe",
     "procuration_donnee", "creditinfo_confirme",
+    "f3_fiche_creation", "f3_consultation_cip", "f3_consultation_amplitude",
+    "f3_risque_ppe", "f3_risque_revenus_multiples", "f3_risque_activite",
+    "f3_risque_autre", "f3_risque_autre_detail", "f3_risque_pays",
+    "f3_niveau_risque", "f3_niveau_risque_revision", "f3_niveau_profil",
+    "f3_agent_nom", "f3_agent_date_signature", "f3_chef_agence_nom",
 }
 
 
+def _dossier_form_class(type_compte):
+    if type_compte == DossierClient.TypeCompte.COMMERCIAL:
+        return DossierCommercialForm
+    return DossierParticulierForm
+
+
 def _form_context(form, dossier=None):
+    type_compte = (
+        dossier.type_compte if dossier else
+        form.initial.get("type_compte") or form.data.get("type_compte")
+    )
     sections = []
     for anchor, title, names in FORM_SECTIONS:
+        if anchor == "entreprise" and type_compte != DossierClient.TypeCompte.COMMERCIAL:
+            continue
         sections.append({
             "anchor": anchor,
             "title": title,
@@ -242,6 +310,7 @@ def _form_context(form, dossier=None):
         "sections": sections,
         "dossier": dossier,
         "is_edit": dossier is not None,
+        "type_compte": type_compte,
     }
 
 
@@ -277,6 +346,14 @@ def _dossier_accessible(request, pk):
     return get_object_or_404(dossiers, pk=pk)
 
 
+def _reference_officielle(request, dossier):
+    profil = getattr(request.user, "profile", None)
+    agence_numero = profil.agence.numero if (profil and profil.agence) else "0000"
+    return build_dossier_reference(
+        agence_numero, dossier.numero_piece, dossier_id=dossier.pk
+    )
+
+
 def _enregistrer(request, form, action, nouveau):
     """Enregistre le dossier.
     action='draft'   → statut BROUILLON
@@ -287,10 +364,7 @@ def _enregistrer(request, form, action, nouveau):
 
     if nouveau:
         # Référence : brouillon d'abord avec UUID, puis on la met à jour à la validation
-        profil = getattr(request.user, "profile", None)
-        agence_numero = profil.agence.numero if (profil and profil.agence) else "0000"
-        numero_piece = form.cleaned_data.get("numero_piece", "") or ""
-        dossier.reference = build_dossier_reference(agence_numero, numero_piece)
+        dossier.reference = new_dossier_reference()
         _instantane_gestionnaire(request, dossier)
 
     if action == "generate":
@@ -383,11 +457,10 @@ def _contexte_preview(dossier, request, pk=None):
     return contexte
 
 
-from django.http import QueryDict
-
 
 @never_cache
 @manager_required
+@transaction.atomic
 def dossier_create(request):
     action = request.POST.get("action", "draft") if request.method == "POST" else "draft"
 
@@ -403,15 +476,40 @@ def dossier_create(request):
         except DossierClient.DoesNotExist:
             messages.error(request, "Dossier introuvable.")
             return redirect("recueil:dossier-create")
+        # Revalider la version en base pour bloquer les confirmations directes.
+        form = _dossier_form_class(dossier.type_compte)(
+            data=model_to_dict(dossier), instance=dossier, generate=True
+        )
+        if not form.is_valid():
+            messages.error(
+                request,
+                "Dossier incomplet : complétez les champs requis avant génération.",
+            )
+            return render(
+                request, "recueil/dossier_form.html", _form_context(form, dossier)
+            )
+        dossier.reference = _reference_officielle(request, dossier)
         dossier.statut = DossierClient.Statut.CREE
-        dossier.save(update_fields=["statut"])
+        dossier.save(update_fields=["reference", "statut"])
         _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
         messages.success(request, "Dossier créé et formulaires prêts pour impression.")
         return redirect("recueil:dossier-print", pk=dossier.pk)
 
-    form = DossierClientForm(request.POST or None, generate=action == "preview")
+    selected_type = (
+        request.POST.get("type_compte", "").strip()
+        if request.method == "POST"
+        else request.GET.get("type_compte", "").strip()
+    )
+    if request.method == "GET" and selected_type not in DossierClient.TypeCompte.values:
+        return render(request, "recueil/type_choix.html")
+    form_class = _dossier_form_class(selected_type)
+    form = form_class(
+        request.POST or None,
+        initial={"type_compte": selected_type} if request.method == "GET" else None,
+        generate=action in {"generate", "preview"},
+    )
     if request.method == "POST" and form.is_valid():
-        if action == "preview":
+        if action in {"generate", "preview"}:
             # Sauvegarder en brouillon AVANT la prévisualisation → données jamais perdues
             dossier = _enregistrer(request, form, "draft", nouveau=True)
             request.session["preview_pk"] = str(dossier.pk)
@@ -426,6 +524,7 @@ def dossier_create(request):
 
 @never_cache
 @manager_required
+@transaction.atomic
 def dossier_edit(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
     if dossier.supprime_le:
@@ -442,21 +541,33 @@ def dossier_edit(request, pk):
 
     # ---- Confirmation après prévisualisation ----
     if action == "confirm":
-        # Le dossier est déjà à jour en BD (mis à jour lors du preview)
+        # Revalider les donnees enregistrees, y compris les anciens brouillons.
+        form = _dossier_form_class(dossier.type_compte)(
+            data=model_to_dict(dossier), instance=dossier, generate=True
+        )
+        if not form.is_valid():
+            messages.error(
+                request,
+                "Dossier incomplet : complétez les champs requis avant génération.",
+            )
+            return render(
+                request, "recueil/dossier_form.html", _form_context(form, dossier)
+            )
         if dossier.statut == DossierClient.Statut.BROUILLON:
+            dossier.reference = _reference_officielle(request, dossier)
             dossier.statut = DossierClient.Statut.CREE
-            dossier.save(update_fields=["statut"])
+            dossier.save(update_fields=["reference", "statut"])
         _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
         messages.success(request, "Dossier créé et formulaires prêts pour impression.")
         return redirect("recueil:dossier-print", pk=dossier.pk)
 
-    form = DossierClientForm(
+    form = _dossier_form_class(dossier.type_compte)(
         request.POST or None,
         instance=dossier,
-        generate=action == "preview",
+        generate=action in {"generate", "preview"},
     )
     if request.method == "POST" and form.is_valid():
-        if action == "preview":
+        if action in {"generate", "preview"}:
             # Sauvegarder les modifications en BD avant d'afficher la preview
             dossier = _enregistrer(request, form, "draft", nouveau=False)
             contexte = _contexte_preview(dossier, request, pk=pk)
@@ -469,6 +580,7 @@ def dossier_edit(request, pk):
 
 @never_cache
 @manager_required
+@transaction.atomic
 @require_POST
 def dossier_reprendre(request, pk):
     """Crée un nouveau brouillon à partir d'un dossier existant du même client.
@@ -573,6 +685,14 @@ def _etat_cases_impression(dossier):
     ajouter_oui_non("actionnaire", dossier.est_actionnaire)
     ajouter_oui_non("entree_directe", dossier.entree_relation_directe)
     ajouter_oui_non("procuration", dossier.procuration_donnee)
+    ajouter_oui_non("f3_fiche_creation", dossier.f3_fiche_creation)
+    ajouter_oui_non("f3_consultation_cip", dossier.f3_consultation_cip)
+    ajouter_oui_non("f3_consultation_amplitude", dossier.f3_consultation_amplitude)
+    ajouter_oui_non("f3_risque_ppe", dossier.f3_risque_ppe)
+    ajouter_oui_non("f3_risque_revenus_multiples", dossier.f3_risque_revenus_multiples)
+    ajouter_oui_non("f3_risque_activite", dossier.f3_risque_activite)
+    ajouter_oui_non("f3_risque_autre", dossier.f3_risque_autre)
+    ajouter_oui_non("f3_risque_pays", dossier.f3_risque_pays)
 
     situation = dossier.situation_matrimoniale
     marie = situation in ("MARIE_MONO", "MARIE_POLY")
@@ -617,12 +737,11 @@ def _etat_cases_impression(dossier):
 
 
 def _contexte_impression(dossier):
-    adresse = dossier.adresse or ", ".join(
+    adresse = ", ".join(
         part
         for part in (
             dossier.porte,
             dossier.rue,
-            dossier.secteur,
             dossier.quartier,
             dossier.ville_residence,
         )
@@ -661,6 +780,7 @@ def _contexte_impression(dossier):
 
 @never_cache
 @manager_required
+@transaction.atomic
 @require_POST
 def dossier_supprimer(request, pk):
     """Suppression logique d'un brouillon — masqué dans l'interface, traçable en BD."""
@@ -681,14 +801,25 @@ def dossier_supprimer(request, pk):
 @manager_required
 def dossier_print(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
-    # Accessible si CREE ou GENERE (GENERE pour compatibilité anciens dossiers)
-    if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
-        messages.error(request, "Le dossier doit d'abord être généré.")
-        return redirect("recueil:dossier-edit", pk=dossier.pk)
+    en_generation = dossier.statut == DossierClient.Statut.BROUILLON
+    if dossier.statut not in (
+        DossierClient.Statut.BROUILLON,
+        DossierClient.Statut.CREE,
+        DossierClient.Statut.GENERE,
+    ):
+        return redirect("recueil:dossier-list")
+    if en_generation:
+        form = _dossier_form_class(dossier.type_compte)(
+            data=model_to_dict(dossier), instance=dossier, generate=True
+        )
+        if not form.is_valid():
+            messages.error(request, "Complétez les champs signalés avant de générer les formulaires.")
+            return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
 
     _journaliser(DossierAuditEvent.Action.CONSULTATION, request.user, dossier)
 
     contexte = _contexte_impression(dossier)
+    contexte["en_generation"] = en_generation
     contexte["dossier_modifie_depuis_impression"] = (
         dossier.derniere_impression_le is not None
         and dossier.maj_le > dossier.derniere_impression_le
@@ -729,11 +860,38 @@ def dossier_print(request, pk):
 
 @never_cache
 @manager_required
+@transaction.atomic
+@require_POST
+def dossier_confirmer(request, pk):
+    dossier = get_object_or_404(
+        DossierClient, pk=pk, cree_par=request.user, statut=DossierClient.Statut.BROUILLON
+    )
+    form = _dossier_form_class(dossier.type_compte)(
+        data=model_to_dict(dossier), instance=dossier, generate=True
+    )
+    if not form.is_valid():
+        messages.error(request, "Complétez les champs signalés avant d'enregistrer le dossier.")
+        return redirect("recueil:dossier-edit", pk=dossier.pk)
+    dossier.reference = _reference_officielle(request, dossier)
+    dossier.statut = DossierClient.Statut.CREE
+    dossier.save(update_fields=["reference", "statut"])
+    _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
+    messages.success(request, "Dossier enregistré comme créé.")
+    return redirect("recueil:dossier-print", pk=dossier.pk)
+
+
+@never_cache
+@manager_required
+@transaction.atomic
 @require_POST
 def dossier_impression_marquer(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
-    if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
-        return JsonResponse({"error": "Le dossier n'est pas encore créé."}, status=400)
+    if dossier.statut not in (
+        DossierClient.Statut.BROUILLON,
+        DossierClient.Statut.CREE,
+        DossierClient.Statut.GENERE,
+    ):
+        return JsonResponse({"error": "Le dossier ne peut pas être imprimé dans son état actuel."}, status=400)
 
     dossier.derniere_impression_le = timezone.now()
     dossier.derniere_impression_par = request.user
@@ -744,6 +902,7 @@ def dossier_impression_marquer(request, pk):
 
 @never_cache
 @manager_required
+@transaction.atomic
 @require_POST
 def dossier_signer(request, pk):
     dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
@@ -762,11 +921,21 @@ def dossier_signer(request, pk):
 @never_cache
 @manager_required
 def recherche_client(request):
-    numero_piece = request.GET.get("numero_piece", "").strip()
+    query = request.GET.get("q", "").strip()
+    if not query:
+        query = request.GET.get("numero_piece", "").strip()
     resultat = None
-    if numero_piece:
+    if query:
         dossier = (
-            DossierClient.objects.filter(numero_piece__iexact=numero_piece)
+            DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
+            .filter(cree_par=request.user)
+            .filter(
+                Q(numero_piece__iexact=query)
+                | Q(nom__icontains=query)
+                | Q(prenoms__icontains=query)
+                | Q(pm_raison_sociale__icontains=query)
+                | Q(pm_sigle__icontains=query)
+            )
             .order_by("-maj_le")
             .first()
         )
@@ -777,7 +946,7 @@ def recherche_client(request):
             DossierAuditEvent.Action.RECHERCHE_CLIENT,
             request.user,
             dossier,
-            {"correspondance": dossier is not None},
+            {"correspondance": dossier is not None, "critere": query},
         )
         if dossier:
             resultat = {
@@ -785,12 +954,14 @@ def recherche_client(request):
                 "nom_complet": f"{dossier.prenoms} {dossier.nom}".strip(),
                 "date_naissance": dossier.date_naissance,
                 "reference": dossier.reference,
+                "type_compte": dossier.get_type_compte_display(),
+                "agence": dossier.agence_snapshot,
                 "maj_le": dossier.maj_le,
             }
     return render(
         request,
         "recueil/recherche_client.html",
-        {"numero_piece": numero_piece, "resultat": resultat},
+        {"query": query, "numero_piece": query, "resultat": resultat},
     )
 
 
@@ -811,11 +982,6 @@ def journal_audit(request):
 # ---------------------------------------------------------------------------
 # Gestion des gestionnaires (réservée aux Admins)
 # ---------------------------------------------------------------------------
-
-from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
-
-from .forms import GestionnaireUserForm, GestionnairePasswordForm, UserProfileForm
 
 
 @never_cache

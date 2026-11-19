@@ -1,0 +1,25 @@
+{% extends "recueil/base.html" %}
+{% block title %}Type de dossier - BCB Ouverture de compte{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> NOUVEAU DOSSIER</div>
+    <h1>Quel type de compte souhaitez-vous ouvrir ?</h1>
+    <p class="page-intro">Choisissez le parcours correspondant au client. Ce choix sera conservé sur le dossier.</p>
+  </div>
+</section>
+<div class="type-choice-grid">
+  <a class="type-choice-card" href="{% url 'recueil:dossier-create' %}?type_compte=PARTICULIER">
+    <span class="type-choice-kicker">PERSONNE PHYSIQUE</span>
+    <strong>Compte particulier</strong>
+    <span>Identité, résidence, situation professionnelle, famille et consentements du client.</span>
+    <span class="button button-primary">Continuer comme particulier</span>
+  </a>
+  <a class="type-choice-card type-choice-commercial" href="{% url 'recueil:dossier-create' %}?type_compte=COMMERCIAL">
+    <span class="type-choice-kicker">ENTREPRISE / PERSONNE MORALE</span>
+    <strong>Compte commercial</strong>
+    <span>Informations de l'entreprise, actionnaires et identité du mandataire.</span>
+    <span class="button button-primary">Continuer comme entreprise</span>
+  </a>
+</div>
+{% endblock %}

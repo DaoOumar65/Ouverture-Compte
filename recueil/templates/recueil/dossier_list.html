@@ -5,7 +5,7 @@
   <div>
     <div class="eyebrow"><span class="eyebrow-line"></span> ESPACE DE TRAVAIL</div>
     <h1>Dossiers d’ouverture de compte</h1>
-    <p class="page-intro">Saisissez les informations client, prévisualisez les formulaires, puis validez pour générer les documents à signer.</p>
+    <p class="page-intro">Générez les formulaires depuis un brouillon, vérifiez-les, puis enregistrez le dossier créé.</p>
   </div>
   {% if not is_admin %}
   <div class="detail-actions">
@@ -33,7 +33,7 @@
 <section class="table-wrap" tabindex="0" role="region" aria-label="Liste des dossiers, défilement horizontal possible">
   <p class="table-scroll-hint">Sur petit écran, faites défiler le tableau horizontalement pour afficher toutes les colonnes.</p>
   <table class="dossier-table">
-    <thead><tr><th>Référence</th><th>Client / entreprise</th><th>Formule de compte</th><th>Statut</th><th>Mis à jour</th><th><span class="sr-only">Ouvrir</span></th></tr></thead>
+    <thead><tr><th>Référence</th><th>Client / entreprise</th><th>Formule de compte</th><th>Statut</th><th>Mis à jour</th><th>Actions</th></tr></thead>
     <tbody>
       {% for dossier in page_obj %}
       <tr>
@@ -42,7 +42,22 @@
         <td>{{ dossier.get_formule_produit_display }}</td>
         <td><span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span></td>
         <td class="date-cell">{{ dossier.maj_le|date:"d/m/Y" }}<small>{{ dossier.maj_le|date:"H:i" }}</small></td>
-        <td><a class="row-open" href="{% url 'recueil:dossier-detail' dossier.pk %}" aria-label="Ouvrir le dossier {{ dossier.reference }}">Ouvrir <span aria-hidden="true">↗</span></a></td>
+        <td class="dossier-row-actions">
+          {% if is_admin %}
+            <a class="button button-outline" href="{% url 'recueil:dossier-detail' dossier.pk %}">Voir</a>
+          {% else %}
+            {% if not dossier.signe_le %}<a class="button button-quiet" href="{% url 'recueil:dossier-edit' dossier.pk %}">Modifier</a>{% endif %}
+            <a class="button button-outline" href="{% url 'recueil:dossier-detail' dossier.pk %}">Voir</a>
+            {% if dossier.statut == "BROUILLON" %}
+              <a class="button button-primary" href="{% url 'recueil:dossier-print' dossier.pk %}">Générer</a>
+              <form method="post" action="{% url 'recueil:dossier-supprimer' dossier.pk %}" onsubmit="return confirm('Supprimer ce brouillon ? Il restera traçable dans le journal d’audit.')">
+                {% csrf_token %}<button class="button button-danger" type="submit">Supprimer</button>
+              </form>
+            {% else %}
+              <a class="button button-primary" href="{% url 'recueil:dossier-print' dossier.pk %}">Imprimer</a>
+            {% endif %}
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr><td colspan="6">

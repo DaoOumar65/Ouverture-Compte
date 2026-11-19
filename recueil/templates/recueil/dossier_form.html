@@ -7,8 +7,8 @@
   <div class="page-heading heading-form">
     <div>
       <div class="eyebrow"><span class="eyebrow-line"></span> OUVERTURE DE COMPTE · {% if is_edit %}{{ dossier.reference }}{% else %}NOUVEAU DOSSIER{% endif %}</div>
-      <h1>{% if is_edit %}Modifier les informations client{% else %}Nouveau dossier d'ouverture{% endif %}</h1>
-      <p class="page-intro">Saisissez les informations, prévisualisez les formulaires, puis validez pour générer les documents à signer.</p>
+      <h1>{% if is_edit %}Modifier le dossier {{ dossier.get_type_compte_display }}{% elif type_compte == 'COMMERCIAL' %}Nouveau dossier commercial{% else %}Nouveau dossier particulier{% endif %}</h1>
+      <p class="page-intro">Renseignez les informations disponibles, puis générez les formulaires pour les vérifier avant de les enregistrer.</p>
     </div>
     {% if dossier %}<span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span>{% endif %}
   </div>
@@ -73,6 +73,7 @@
             {% elif section.anchor == "famille" %}<p>Complétez les renseignements sur le conjoint et les enfants selon la situation du client.</p>
             {% elif section.anchor == "conformite" %}<p>Déclarations à recueillir auprès du client.</p>
             {% elif section.anchor == "consentements" %}<p>Formulaire de consentement CREDITINFO à lire au client et à faire confirmer.</p>
+            {% elif section.anchor == "controle-agent" %}<p>Contrôles internes facultatifs à renseigner par le gestionnaire lorsqu'ils sont effectués ou connus.</p>
             {% endif %}
           </div>
         </div>
@@ -80,7 +81,7 @@
           {% for field in section.fields %}
             <div class="field-wrap
               {% if field.field.widget.input_type == 'checkbox' %}field-checkbox{% endif %}
-              {% if field.name in 'adresse,repere_proximite,pm_activite_principale,operations_habituelles,societes_administrees,societes_actionnaire,autres_comptes_bancaires,enfants_noms,procuration_details,parrainage_tiers,client_introduit_par' %}field-wide{% endif %}">
+              {% if field.name in 'adresse,repere_proximite,pm_activite_principale,operations_habituelles,societes_administrees,societes_actionnaire,autres_comptes_bancaires,enfants_noms,procuration_details,parrainage_tiers,client_introduit_par,f3_risque_autre_detail,f3_niveau_risque_revision' %}field-wide{% endif %}">
               {% if field.field.widget.input_type == "checkbox" %}
                 <label class="checkbox-label">{{ field }}<span>{{ field.label }}</span></label>
               {% else %}
@@ -104,8 +105,8 @@
   <div class="form-actions">
     <a class="button button-quiet" href="{% if dossier %}{% url 'recueil:dossier-detail' dossier.pk %}{% else %}{% url 'recueil:dossier-list' %}{% endif %}">Annuler</a>
     <button class="button button-outline" type="submit" name="action" value="draft">Enregistrer le brouillon</button>
-    <button class="button button-primary" type="submit" name="action" value="preview">
-      <span aria-hidden="true">👁</span> Prévisualiser les formulaires
+    <button class="button button-primary" type="submit" name="action" value="generate">
+      <span aria-hidden="true">🖨</span> Générer les formulaires
     </button>
   </div>
 

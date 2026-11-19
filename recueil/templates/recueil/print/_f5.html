@@ -1,20 +1,7 @@
 <section class="page f5">
   {% include "recueil/print/_logo.html" %}
 
-  <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:4mm; gap:10mm;">
-    <div style="font-size:9pt;">
-      <div class="row"><span class="lbl">Client :</span><span class="val" style="font-weight:bold;">{{ nom_complet }}</span></div>
-      <div class="row"><span class="lbl">Adresse :</span><span class="val">{{ adresse_domicile }}</span></div>
-      {% if dossier.secteur %}<div class="row"><span class="lbl">Secteur :</span><span class="val">{{ dossier.secteur }}</span><span class="lbl" style="margin-left:4mm;">Quartier :</span><span class="val">{{ dossier.quartier }}</span></div>{% endif %}
-      {% if dossier.repere_proximite %}<div class="row"><span class="lbl">Repère :</span><span class="val">{{ dossier.repere_proximite }}</span></div>{% endif %}
-    </div>
-    <div style="font-size:8pt; text-align:right; color:#555;">
-      Date : {{ date_impression|date:"d/m/Y" }}
-    </div>
-  </div>
-
   <div class="cadre-plan">
     <span>Plan de Repérage</span>
-    <p style="font-size:7.5pt; color:#888; margin-top:3mm;">(Schéma à dessiner par le gestionnaire ou à annoter au verso)</p>
   </div>
 </section>

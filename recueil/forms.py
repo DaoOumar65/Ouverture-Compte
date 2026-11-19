@@ -38,6 +38,9 @@ COMMERCIAL_REQUIRED_FOR_GENERATION = (
     "pm_forme_juridique",
     "pm_activite_principale",
     "pm_numero_rccm",
+    "pm_date_creation",
+    "pm_date_enregistrement_rccm",
+    "pm_date_nomination_mandataire",
     "pm_ifu",
     "pm_siege_social",
 )
@@ -71,6 +74,7 @@ CHAMPS_KYC_REQUIS_GENERATION = (
     "justificatif_domicile",
     "mode_entree_relation",
     "nombre_enfants",
+    "pays_residence_fiscale",
 )
 
 
@@ -89,14 +93,20 @@ class DossierClientForm(forms.ModelForm):
             "signe_le", "signe_par",
         )
         widgets = {
-            "date_naissance": forms.DateInput(attrs={"type": "date"}),
-            "piece_delivree_le": forms.DateInput(attrs={"type": "date"}),
-            "piece_expire_le": forms.DateInput(attrs={"type": "date"}),
-            "date_embauche": forms.DateInput(attrs={"type": "date"}),
-            "conjoint_date_naissance": forms.DateInput(attrs={"type": "date"}),
-            "conjoint_piece_delivree_le": forms.DateInput(attrs={"type": "date"}),
-            "conjoint_piece_expire_le": forms.DateInput(attrs={"type": "date"}),
-            "conjoint_date_embauche": forms.DateInput(attrs={"type": "date"}),
+            "date_naissance": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "piece_delivree_le": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "piece_expire_le": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "date_embauche": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "pm_date_creation": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "pm_date_enregistrement_rccm": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "pm_date_nomination_mandataire": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "f3_agent_date_signature": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "f3_niveau_risque": forms.RadioSelect,
+            "f3_niveau_profil": forms.RadioSelect,
+            "conjoint_date_naissance": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "conjoint_piece_delivree_le": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "conjoint_piece_expire_le": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
+            "conjoint_date_embauche": forms.DateInput(format="%Y-%m-%d", attrs={"type": "date"}),
             "revenu_mensuel": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "revenus_immobiliers": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
             "revenus_mobiliers": forms.NumberInput(attrs={"step": "0.01", "min": "0"}),
@@ -110,7 +120,14 @@ class DossierClientForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         self.generate = kwargs.pop("generate", False)
+        fixed_type = kwargs.pop("fixed_type", None)
         super().__init__(*args, **kwargs)
+        if fixed_type in DossierClient.TypeCompte.values:
+            self.initial["type_compte"] = fixed_type
+            self.fields["type_compte"].disabled = True
+            self.fields["type_compte"].widget = forms.HiddenInput()
+        if not self.instance._state.adding:
+            self.fields["type_compte"].disabled = True
         for name, field in self.fields.items():
             field.required = False
             if isinstance(field, forms.ChoiceField) and not any(
@@ -129,6 +146,13 @@ class DossierClientForm(forms.ModelForm):
             *DECLARATIONS,
             *CONSENTEMENTS_CREDITINFO,
             *REPONSES_KYC,
+            "f3_consultation_cip",
+            "f3_consultation_amplitude",
+            "f3_risque_ppe",
+            "f3_risque_revenus_multiples",
+            "f3_risque_activite",
+            "f3_risque_autre",
+            "f3_risque_pays",
         ):
             label = self.fields[name].label
             self.fields[name] = forms.TypedChoiceField(
@@ -138,6 +162,20 @@ class DossierClientForm(forms.ModelForm):
                 coerce=lambda value: value == "True",
                 empty_value=None,
                 widget=TaggedRadioSelect(attrs={"data-field-name": name}),
+            )
+        self.fields["f3_fiche_creation"] = forms.TypedChoiceField(
+            label="Type de fiche KYC",
+            required=False,
+            choices=[("True", "Fiche de création"), ("False", "Fiche de mise à jour")],
+            coerce=lambda value: value == "True",
+            empty_value=None,
+            widget=TaggedRadioSelect(attrs={"data-field-name": "f3_fiche_creation"}),
+        )
+        for name in ("f3_niveau_risque", "f3_niveau_profil"):
+            field = self.fields[name]
+            field.choices = [choice for choice in field.choices if choice[0] != ""]
+            field.widget = TaggedRadioSelect(
+                attrs={"data-field-name": name}, choices=field.choices,
             )
 
     def clean(self):
@@ -259,25 +297,33 @@ class DossierClientForm(forms.ModelForm):
         return cleaned
 
 
+class DossierParticulierForm(DossierClientForm):
+    def __init__(self, *args, **kwargs):
+        kwargs["fixed_type"] = DossierClient.TypeCompte.PARTICULIER
+        super().__init__(*args, **kwargs)
+
+
+class DossierCommercialForm(DossierClientForm):
+    def __init__(self, *args, **kwargs):
+        kwargs["fixed_type"] = DossierClient.TypeCompte.COMMERCIAL
+        super().__init__(*args, **kwargs)
+
+
 def new_dossier_reference():
     return f"BCB-{timezone.localdate():%Y}-{uuid.uuid4().hex[:8].upper()}"
 
 
-def build_dossier_reference(agence_numero, numero_piece):
-    """
-    Référence finale : BCB-{num_agence}-{CNIB_ou_passeport}-{ordre_padded}
-    Exemple : BCB-1001-B1234567-0042
-    Le numéro d'ordre est le compteur global de tous les dossiers (hors désactivés).
-    """
+def build_dossier_reference(agence_numero, numero_piece, dossier_id=None):
+    """Build the official reference; disabled records keep their sequence number."""
     from .models import DossierClient
-    # Nettoyer la pièce : garder uniquement alphanumérique
+
     piece_clean = "".join(c for c in (numero_piece or "") if c.isalnum()).upper()[:20]
     if not piece_clean:
         piece_clean = uuid.uuid4().hex[:8].upper()
-    # Numéro d'ordre global (hors désactivés)
-    ordre = DossierClient.objects.exclude(
-        statut=DossierClient.Statut.DESACTIVE
-    ).count() + 1
+    dossiers = DossierClient.objects.all()
+    if dossier_id:
+        dossiers = dossiers.exclude(pk=dossier_id)
+    ordre = dossiers.count() + 1
     agence_num = str(agence_numero or "0000")
     return f"BCB-{agence_num}-{piece_clean}-{ordre:04d}"
 

@@ -34,13 +34,16 @@
   </div>
   <div class="row"><span class="lbl" style="min-width:60mm;">Objet social :</span><span class="val">{{ dossier.pm_activite_principale }}</span></div>
   <div class="row"><span class="lbl" style="min-width:60mm;">Numéro d'immatriculation au RCCM :</span><span class="val">{{ dossier.pm_numero_rccm }}</span></div>
-  <div class="row"><span class="lbl" style="min-width:60mm;">Date d'immatriculation au RCCM :</span><span class="val"></span></div>
-  <div class="row"><span class="lbl" style="min-width:60mm;">Date du procès-verbal de nomination :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Date d'immatriculation au RCCM :</span><span class="val">{{ dossier.pm_date_enregistrement_rccm|date:"d/m/Y" }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:60mm;">Date du procès-verbal de nomination :</span><span class="val">{{ dossier.pm_date_nomination_mandataire|date:"d/m/Y" }}</span></div>
   <div class="row"><span class="lbl" style="min-width:60mm;">Références pouvoirs spéciaux :</span><span class="val"></span></div>
 
   <div style="margin:4mm 0; text-align:center;"><span class="gras">DENOMINATION SOCIALE</span><br><span>Ci-après dénommée <strong>" LE CLIENT "</strong></span></div>
   <div style="margin-bottom:4mm; font-weight:bold;">Ont convenu et arrêté ce qui suit :</div>
 
+</section>
+
+<section class="page comm-convention">
   <h3 style="font-size:9.5pt; margin:3mm 0;">Art.1 : OUVERTURE D'UN COMPTE COURANT</h3>
   <p style="text-align:justify;">
     Monsieur ou Madame <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.nom }} {{ dossier.prenoms }}</span><br>
@@ -77,6 +80,9 @@
   <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 9 : IMPÔTS ET FRAIS</h3>
   <p style="text-align:justify; font-size:8.5pt;">Tous les impôts, frais, droits et taxes quelconques présents et à venir sur les intérêts et le principal des sommes portées en compte courant ou dues postérieurement à la clôture du compte seront à la charge du CLIENT sans aucune exception ni réserve. Tous les frais et droits des présentes et ceux qui en seront la suite et la conséquence seront également à sa charge. En cas de poursuite judiciaire, les frais de la procédure, notamment les honoraires d'avocats seront à sa charge.</p>
 
+</section>
+
+<section class="page comm-convention">
   <h3 style="font-size:9.5pt; margin:3mm 0;">Art. 10 : DÉCLARATIONS</h3>
   <p style="text-align:justify; font-size:8.5pt;">Monsieur/Madame/Mademoiselle <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.nom }} {{ dossier.prenoms }}</span> agissant ès qualité déclare sous les peines de droit :<br>
   - que <span class="val" style="display:inline-block;min-width:50mm;">{{ dossier.pm_raison_sociale }}</span> est régulièrement constituée et qu'il/elle a tous pouvoirs pour intervenir au présent acte, en son nom ;<br>

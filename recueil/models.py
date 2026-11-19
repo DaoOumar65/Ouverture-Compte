@@ -167,6 +167,9 @@ class DossierClient(models.Model):
     # =========================================================================
     ville_residence = models.CharField("Ville de résidence", max_length=80, default="Ouagadougou")
     pays_residence = models.CharField("Pays de résidence", max_length=80, default="Burkina Faso")
+    pays_residence_fiscale = models.CharField(
+        "Pays de résidence fiscale", max_length=80, blank=True,
+    )
     secteur = models.CharField("Secteur", max_length=40, blank=True)
     quartier = models.CharField("Quartier", max_length=100, blank=True)
     rue = models.CharField("Rue / Avenue", max_length=100, blank=True)
@@ -207,9 +210,12 @@ class DossierClient(models.Model):
     activite_commerciale = models.CharField(
         "Activité commerciale exercée", max_length=200, blank=True,
     )
-    profession = models.CharField("Profession / Titre", max_length=120)
+    profession = models.CharField(
+        "Situation professionnelle du client (justificatifs)", max_length=120,
+    )
     employeur = models.CharField("Employeur / Établissement", max_length=150, blank=True)
     adresse_employeur = models.CharField("Adresse du lieu de travail", max_length=150, blank=True)
+    secteur_activite = models.CharField("Secteur d'activité", max_length=120, blank=True)
     poste_occupe = models.CharField("Poste occupé", max_length=100, blank=True)
     date_embauche = models.DateField("Date d'embauche", null=True, blank=True)
     revenu_mensuel = models.DecimalField("Salaire net mensuel (FCFA)", max_digits=14, decimal_places=2, null=True, blank=True)
@@ -276,7 +282,10 @@ class DossierClient(models.Model):
         "Procuration donnée", null=True, blank=True,
     )
     procuration_details = models.CharField(
-        "Détails de la procuration", max_length=200, blank=True,
+        "Nature de la procuration, relation et numéro du compte concerné",
+        max_length=200,
+        blank=True,
+        help_text="Précisez la nature de la procuration et le numéro du compte concerné.",
     )
 
     # =========================================================================
@@ -324,7 +333,11 @@ class DossierClient(models.Model):
     urgence_tel_1 = models.CharField("Urgence 1 - Téléphone", max_length=30, blank=True)
     urgence_prof_1 = models.CharField("Urgence 1 - Profession", max_length=120, blank=True)
     urgence_lieu_travail_1 = models.CharField("Urgence 1 - Lieu de travail", max_length=150, blank=True)
-    urgence_adresse_1 = models.CharField("Urgence 1 - Secteur/Quartier", max_length=120, blank=True)
+    urgence_adresse_1 = models.CharField("Urgence 1 - Adresse", max_length=120, blank=True)
+    urgence_tel_2_1 = models.CharField("Urgence 1 - Téléphone secondaire", max_length=30, blank=True)
+    urgence_secteur_1 = models.CharField("Urgence 1 - Secteur", max_length=40, blank=True)
+    urgence_quartier_1 = models.CharField("Urgence 1 - Quartier", max_length=100, blank=True)
+    urgence_detail_1 = models.TextField("Urgence 1 - Détail explicatif", blank=True)
 
     urgence_nom_2 = models.CharField("Urgence 2 - Nom et prénoms", max_length=150, blank=True)
     urgence_tel_2 = models.CharField("Urgence 2 - Téléphone", max_length=30, blank=True)
@@ -346,6 +359,13 @@ class DossierClient(models.Model):
     )
     pm_activite_principale = models.CharField("Objet social ou activité principale", max_length=200, blank=True)
     pm_numero_rccm = models.CharField("N° RCCM Entreprise", max_length=80, blank=True)
+    pm_date_creation = models.DateField("Date de création de l'entreprise", null=True, blank=True)
+    pm_date_enregistrement_rccm = models.DateField(
+        "Date d'enregistrement au RCCM", null=True, blank=True,
+    )
+    pm_date_nomination_mandataire = models.DateField(
+        "Date du procès-verbal de nomination du mandataire", null=True, blank=True,
+    )
     pm_ifu = models.CharField("N° IFU Entreprise", max_length=50, blank=True)
     pm_siege_social = models.CharField("Siège social (Ville/Pays)", max_length=120, blank=True)
     pm_secteur_rue = models.CharField("Secteur / Rue Entreprise", max_length=120, blank=True)
@@ -362,7 +382,33 @@ class DossierClient(models.Model):
     pm_fonction_mandataire = models.CharField("Fonction du mandataire", max_length=100, default="Gérant / Directeur Général", blank=True)
 
     # =========================================================================
-    # 7. CONFORMITÉ & DÉCLARATIONS DU CLIENT
+    # 7. CONTRÔLES INTERNES DE L'AGENT (KYC)
+    # =========================================================================
+    # Ces réponses sont facultatives : elles ne bloquent jamais la génération.
+    f3_fiche_creation = models.BooleanField("Fiche de création (sinon mise à jour)", null=True, blank=True)
+    f3_consultation_cip = models.BooleanField("Consultation CIP effectuée", null=True, blank=True)
+    f3_consultation_amplitude = models.BooleanField("Consultation AMPLITUDE effectuée", null=True, blank=True)
+    f3_risque_ppe = models.BooleanField("Risque — PPE active ou proche", null=True, blank=True)
+    f3_risque_revenus_multiples = models.BooleanField("Risque — revenus multiples et divers", null=True, blank=True)
+    f3_risque_activite = models.BooleanField("Risque — activité à risque élevé", null=True, blank=True)
+    f3_risque_autre = models.BooleanField("Risque — autre raison", null=True, blank=True)
+    f3_risque_autre_detail = models.TextField("Préciser l'autre raison de risque", blank=True)
+    f3_risque_pays = models.BooleanField("Client sensible ou pays à risque après consultation AMPLITUDE", null=True, blank=True)
+    f3_niveau_risque = models.CharField(
+        "Niveau de risque attribué au client", max_length=10, blank=True,
+        choices=[("REDUIT", "Réduit"), ("ELEVE", "Élevé")],
+    )
+    f3_niveau_risque_revision = models.CharField("Niveau de risque en cas de révision", max_length=80, blank=True)
+    f3_niveau_profil = models.CharField(
+        "Niveau de profil attribué au client", max_length=10, blank=True,
+        choices=[("REDUIT", "Réduit"), ("ELEVE", "Élevé")],
+    )
+    f3_agent_nom = models.CharField("Gestionnaire de compte — nom et prénoms", max_length=150, blank=True)
+    f3_agent_date_signature = models.DateField("Date de signature du gestionnaire", null=True, blank=True)
+    f3_chef_agence_nom = models.CharField("Chef d'agence — nom et prénoms", max_length=150, blank=True)
+
+    # =========================================================================
+    # 8. CONFORMITÉ & DÉCLARATIONS DU CLIENT
     # =========================================================================
     # Trois états : None = non renseigné (rien n'est imprimé), True = Oui, False = Non.
     est_us_person = models.BooleanField("Est une US Person (FATCA)", null=True, blank=True)

@@ -3,8 +3,9 @@ from django.contrib.auth.models import Group
 from django.test import TestCase
 from django.utils import timezone
 from django.urls import reverse
+from unittest.mock import patch
 
-from .forms import DossierClientForm
+from .forms import DossierClientForm, build_dossier_reference
 from .models import Agence, DossierAuditEvent, DossierClient, UserProfile
 
 
@@ -44,6 +45,23 @@ class DossierFlowTests(TestCase):
             )
         )
         self.assertEqual(response.status_code, 302)
+
+    def test_create_starts_with_separate_account_type_choices(self):
+        response = self.client.get(reverse("recueil:dossier-create"))
+        self.assertContains(response, "Compte particulier")
+        self.assertContains(response, "Compte commercial")
+
+        individual = self.client.get(
+            reverse("recueil:dossier-create"), {"type_compte": "PARTICULIER"}
+        )
+        self.assertContains(individual, "Nouveau dossier particulier")
+        self.assertNotContains(individual, "Entreprise &amp; mandataire")
+
+        commercial = self.client.get(
+            reverse("recueil:dossier-create"), {"type_compte": "COMMERCIAL"}
+        )
+        self.assertContains(commercial, "Nouveau dossier commercial")
+        self.assertContains(commercial, "Entreprise &amp; mandataire")
 
     def test_can_save_an_incomplete_draft_and_retrieve_it(self):
         response = self.client.post(
@@ -121,6 +139,13 @@ class DossierFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         for form_code in ("f1", "f2", "f3", "f4", "f5"):
             self.assertContains(response, f'class="page {form_code}"')
+        from django.conf import settings
+        from weasyprint import HTML
+
+        rendered = HTML(
+            string=response.content.decode(), base_url=str(settings.BASE_DIR)
+        ).render()
+        self.assertEqual(len(rendered.pages), 9)
         for value in (
             "Compte Épargne",
             "Bobo-Dioulasso",
@@ -132,6 +157,26 @@ class DossierFlowTests(TestCase):
             "Secteur 8",
         ):
             self.assertContains(response, value)
+
+    def test_f5_remains_a_blank_plan_without_extra_client_fields(self):
+        dossier = DossierClient.objects.create(
+            reference="BCB-2026-PLAN0001",
+            cree_par=self.user,
+            statut=DossierClient.Statut.CREE,
+            nom="Kaboré",
+            prenoms="Aïcha",
+            numero_piece="PLAN-1",
+            telephone="70000000",
+            secteur="15",
+            repere_proximite="Marché central",
+        )
+        response = self.client.get(
+            reverse("recueil:dossier-print", args=[dossier.pk]), {"f": ["f5"]}
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="page f5"')
+        self.assertNotContains(response, "Marché central")
+        self.assertNotContains(response, "Kaboré")
 
     def test_print_maps_additional_personal_information_and_explicit_answers(self):
         dossier = DossierClient.objects.create(
@@ -267,43 +312,52 @@ class DossierFlowTests(TestCase):
             403,
         )
 
-    def test_global_identity_search_reuses_only_latest_summary_and_logs_copy(self):
+    def test_client_search_is_limited_to_owned_dossiers_and_logs_reuse(self):
         other = get_user_model().objects.create_user(username="collegue")
         manager_group, _ = Group.objects.get_or_create(name="GESTIONNAIRE")
         other.groups.add(manager_group)
-        source = DossierClient.objects.create(
-            reference="BCB-2026-REUSE0001",
+        foreign = DossierClient.objects.create(
+            reference="BCB-2026-FOREIGN001",
             cree_par=other,
-            nom="Traoré",
+            nom="Traore",
             prenoms="Aminata",
-            numero_piece="CNIB-REUSE-99",
+            numero_piece="CNIB-FOREIGN-99",
             telephone="77000000",
-            profession="Information privée",
+        )
+        own = DossierClient.objects.create(
+            reference="BCB-2026-OWN000001",
+            cree_par=self.user,
+            nom="Sawadogo",
+            prenoms="Aminata",
+            numero_piece="CNIB-OWN-99",
+            telephone="76000000",
+            profession="Information privee",
         )
 
         response = self.client.get(
-            reverse("recueil:recherche-client"),
-            {"numero_piece": "CNIB-REUSE-99"},
+            reverse("recueil:recherche-client"), {"q": "CNIB-FOREIGN-99"}
         )
-        self.assertContains(response, source.reference)
-        self.assertContains(response, "Aminata Traoré")
-        self.assertNotContains(response, "77000000")
-        self.assertNotContains(response, "Information privée")
+        self.assertNotContains(response, foreign.reference)
+        self.assertContains(response, "Aucun dossier")
+
+        response = self.client.get(
+            reverse("recueil:recherche-client"), {"q": "Aminata"}
+        )
+        self.assertContains(response, own.reference)
+        self.assertNotContains(response, foreign.reference)
+        self.assertNotContains(response, "76000000")
+        self.assertNotContains(response, "Information privee")
 
         response = self.client.post(
-            reverse("recueil:dossier-reprendre", args=[source.pk])
+            reverse("recueil:dossier-reprendre", args=[own.pk])
         )
-        copied = DossierClient.objects.exclude(pk=source.pk).get()
-        self.assertRedirects(
-            response,
-            reverse("recueil:dossier-edit", args=[copied.pk]),
-        )
+        copied = DossierClient.objects.exclude(pk__in=[own.pk, foreign.pk]).get()
+        self.assertRedirects(response, reverse("recueil:dossier-edit", args=[copied.pk]))
         self.assertEqual(copied.cree_par, self.user)
-        self.assertEqual(copied.nom, source.nom)
-        self.assertEqual(copied.numero_piece, source.numero_piece)
+        self.assertEqual(copied.numero_piece, own.numero_piece)
         self.assertTrue(
             DossierAuditEvent.objects.filter(
-                dossier=source,
+                dossier=own,
                 action=DossierAuditEvent.Action.REUTILISATION,
                 utilisateur=self.user,
             ).exists()
@@ -386,6 +440,163 @@ class DossierFlowTests(TestCase):
             ).exists()
         )
 
+    def test_dossier_and_audit_are_rolled_back_together_on_log_failure(self):
+        self.client.raise_request_exception = False
+        with patch("recueil.views._journaliser", side_effect=RuntimeError("audit failure")):
+            response = self.client.post(
+                reverse("recueil:dossier-create"),
+                {"type_compte": "PARTICULIER", "action": "draft"},
+            )
+        self.assertEqual(response.status_code, 500)
+        self.assertFalse(DossierClient.objects.exists())
+        self.client.raise_request_exception = True
+
+    def test_printed_address_keeps_sector_separate_from_localization_detail(self):
+        dossier = DossierClient.objects.create(
+            reference="BCB-2026-ADDRESS01",
+            cree_par=self.user,
+            statut=DossierClient.Statut.CREE,
+            nom="Kaboré",
+            prenoms="Aïcha",
+            numero_piece="ADDRESS-1",
+            telephone="70000000",
+            porte="Lot 15",
+            rue="Rue A",
+            secteur="15",
+            quartier="Zogona",
+            ville_residence="Ouagadougou",
+            adresse="Près de la grande mosquée",
+            repere_proximite="Marché central",
+            urgence_nom_1="Contact Test",
+            urgence_tel_1="70000001",
+            urgence_tel_2_1="70000002",
+            urgence_secteur_1="Secteur 4",
+            urgence_quartier_1="Koulouba",
+            urgence_detail_1="\u00c0 côté de la mairie",
+        )
+        response = self.client.get(
+            reverse("recueil:dossier-print", args=[dossier.pk]), {"f": ["f4"]}
+        )
+        self.assertContains(response, "Lot 15, Rue A, Zogona, Ouagadougou")
+        self.assertContains(response, 'Secteur :</span><span class="val">15')
+        self.assertContains(response, "Détail explicatif précis")
+        self.assertContains(response, "Près de la grande mosquée")
+        self.assertContains(response, "70000002")
+        self.assertContains(response, "Secteur 4")
+        self.assertContains(response, "Koulouba")
+        self.assertContains(response, "\u00c0 côté de la mairie")
+        self.assertNotContains(response, "III-")
+
+    def test_incomplete_draft_cannot_be_confirmed_directly(self):
+        dossier = DossierClient.objects.create(
+            reference="BCB-2026-CONFIRM001",
+            cree_par=self.user,
+            statut=DossierClient.Statut.BROUILLON,
+            nom="Client",
+            prenoms="Incomplet",
+            numero_piece="CONFIRM-1",
+            telephone="70000000",
+        )
+
+        response = self.client.post(
+            reverse("recueil:dossier-edit", args=[dossier.pk]),
+            {"action": "confirm"},
+        )
+
+        dossier.refresh_from_db()
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(dossier.statut, DossierClient.Statut.BROUILLON)
+        self.assertContains(response, "Dossier incomplet")
+        self.assertFalse(
+            DossierAuditEvent.objects.filter(
+                dossier=dossier, action=DossierAuditEvent.Action.GENERATION
+            ).exists()
+        )
+
+    def test_reference_uses_identity_and_never_reuses_disabled_order(self):
+        DossierClient.objects.create(
+            reference="BCB-1001-B1234567-0001",
+            cree_par=self.user,
+            statut=DossierClient.Statut.DESACTIVE,
+            nom="Ancien",
+            prenoms="Dossier",
+            numero_piece="B1234567",
+            telephone="70000000",
+        )
+        response = self.client.post(
+            reverse("recueil:dossier-create"),
+            {
+                "type_compte": "PARTICULIER",
+                "nom": "Nouveau",
+                "prenoms": "Client",
+                "numero_piece": "B1234567",
+                "telephone": "70000000",
+                "action": "draft",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        draft = DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE).get()
+        self.assertTrue(draft.reference.startswith("BCB-2026-"))
+        self.assertEqual(
+            build_dossier_reference("1001", "B1234567", dossier_id=draft.pk),
+            "BCB-1001-B1234567-0002",
+        )
+
+    def test_client_search_accepts_names_and_hides_deactivated_dossiers(self):
+        dossier = DossierClient.objects.create(
+            reference="BCB-2026-NAME0001",
+            cree_par=self.user,
+            nom="Sawadogo",
+            prenoms="Aminata",
+            numero_piece="NAME-1",
+            telephone="77000000",
+        )
+        response = self.client.get(
+            reverse("recueil:recherche-client"), {"q": "Aminata"}
+        )
+        self.assertContains(response, dossier.reference)
+        self.assertContains(response, "Particulier")
+        self.assertNotContains(response, "77000000")
+
+        dossier.statut = DossierClient.Statut.DESACTIVE
+        dossier.save(update_fields=["statut"])
+        response = self.client.get(
+            reverse("recueil:recherche-client"), {"q": "Aminata"}
+        )
+        self.assertContains(response, "Aucun dossier")
+
+    def test_account_type_is_locked_after_dossier_creation(self):
+        dossier = DossierClient.objects.create(
+            reference="BCB-2026-TYPE0001",
+            type_compte=DossierClient.TypeCompte.COMMERCIAL,
+            cree_par=self.user,
+            nom="Traore",
+            prenoms="Issa",
+            numero_piece="TYPE-1",
+            telephone="71000000",
+            profession="Gerant",
+            pm_raison_sociale="Savane Distribution",
+        )
+        form = DossierClientForm(instance=dossier)
+        self.assertTrue(form.fields["type_compte"].disabled)
+
+        response = self.client.post(
+            reverse("recueil:dossier-edit", args=[dossier.pk]),
+            {
+                "type_compte": "PARTICULIER",
+                "formule_produit": "COMMERCIAL",
+                "nom": "Traore",
+                "prenoms": "Issa",
+                "telephone": "71000000",
+                "profession": "Gerant",
+                "pm_raison_sociale": "Savane Distribution",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        dossier.refresh_from_db()
+        self.assertEqual(dossier.type_compte, DossierClient.TypeCompte.COMMERCIAL)
+        self.assertEqual(dossier.pm_raison_sociale, "Savane Distribution")
+
     def test_generate_rejects_missing_required_identity_fields(self):
         response = self.client.post(
             reverse("recueil:dossier-create"),
@@ -444,7 +655,7 @@ class DossierFlowTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("creditinfo_confirme", form.errors)
 
-    def test_switching_to_individual_clears_company_data(self):
+    def test_existing_dossier_type_cannot_be_changed(self):
         dossier = DossierClient.objects.create(
             reference="BCB-2026-TEST0001",
             type_compte=DossierClient.TypeCompte.COMMERCIAL,
@@ -462,12 +673,13 @@ class DossierFlowTests(TestCase):
                 "prenoms": "Issa",
                 "telephone": "71000000",
                 "profession": "Gérant",
+                "pm_raison_sociale": "Savane Distribution",
             },
         )
         self.assertRedirects(response, reverse("recueil:dossier-detail", args=[dossier.pk]))
         dossier.refresh_from_db()
-        self.assertEqual(dossier.type_compte, DossierClient.TypeCompte.PARTICULIER)
-        self.assertEqual(dossier.pm_raison_sociale, "")
+        self.assertEqual(dossier.type_compte, DossierClient.TypeCompte.COMMERCIAL)
+        self.assertEqual(dossier.pm_raison_sociale, "Savane Distribution")
 
     def test_valid_individual_dossier_generates_the_new_print_layout(self):
         data = {
@@ -484,6 +696,7 @@ class DossierFlowTests(TestCase):
             "numero_piece": "B1234567",
             "situation_matrimoniale": "CELIBATAIRE",
             "ville_residence": "Ouagadougou",
+            "pays_residence_fiscale": "Burkina Faso",
             "telephone": "70000000",
             "profession": "Commerçante",
             "categorie_client": "ACTIVITE_COMMERCIALE",
@@ -514,6 +727,13 @@ class DossierFlowTests(TestCase):
         # Étape 1 : prévisualisation — sauvegarde en brouillon (fix bug session)
         preview = self.client.post(reverse("recueil:dossier-create"), data)
         self.assertEqual(preview.status_code, 200)
+        from django.conf import settings
+        from weasyprint import HTML
+
+        preview_pages = HTML(
+            string=preview.content.decode(), base_url=str(settings.BASE_DIR)
+        ).render()
+        self.assertEqual(len(preview_pages.pages), 9)
         dossier_brouillon = DossierClient.objects.get()
         self.assertEqual(dossier_brouillon.statut, DossierClient.Statut.BROUILLON)
         # Étape 2 : confirmation → passe en CREE
@@ -524,6 +744,7 @@ class DossierFlowTests(TestCase):
         self.assertEqual(response.status_code, 302, response.content.decode())
         dossier = DossierClient.objects.get()
         self.assertEqual(dossier.statut, DossierClient.Statut.CREE)
+        self.assertEqual(dossier.reference, "BCB-1001-B1234567-0001")
         self.assertIsNone(dossier.pdf_fige)
         self.assertEqual(dossier.categorie_client, DossierClient.CategorieClient.ACTIVITE_COMMERCIALE)
         self.assertTrue(dossier.resident_bf)
@@ -538,6 +759,8 @@ class DossierFlowTests(TestCase):
             self.assertContains(documents, f'class="page {form_code}"')
         self.assertContains(documents, "Kaboré")
         self.assertContains(documents, "70000000")
+        self.assertContains(documents, "Pays de résidence fiscale")
+        self.assertContains(documents, "Burkina Faso")
 
     def test_commercial_generation_requires_company_information(self):
         response = self.client.post(
@@ -586,6 +809,9 @@ class DossierFlowTests(TestCase):
                 "pm_forme_juridique": "SARL",
                 "pm_activite_principale": "Commerce général",
                 "pm_numero_rccm": "BF-OUA-2020-B-1234",
+                "pm_date_creation": "2020-01-15",
+                "pm_date_enregistrement_rccm": "2020-02-01",
+                "pm_date_nomination_mandataire": "2025-01-10",
                 "pm_ifu": "00012345A",
                 "pm_siege_social": "Ouagadougou, Burkina Faso",
                 "est_us_person": "False",
@@ -624,3 +850,13 @@ class DossierFlowTests(TestCase):
         self.assertContains(documents, "FICHE D'IDENTIFICATION DU CLIENT PERSONNE MORALE")
         self.assertContains(documents, "CONSENTEMENT")
         self.assertContains(documents, "SPÉCIMEN DE SIGNATURE")
+        self.assertContains(documents, "15/01/2020")
+        self.assertContains(documents, "01/02/2020")
+        self.assertContains(documents, "10/01/2025")
+        from django.conf import settings
+        from weasyprint import HTML
+
+        rendered = HTML(
+            string=documents.content.decode(), base_url=str(settings.BASE_DIR)
+        ).render()
+        self.assertEqual(len(rendered.pages), 19)

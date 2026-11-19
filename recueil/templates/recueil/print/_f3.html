@@ -9,12 +9,12 @@
 
   <div class="row"><span class="lbl">Agence de :</span><span class="val">{{ dossier.agence_snapshot }}</span></div>
   <div class="row" style="gap: 14mm;">
-    <span>Fiche de Création <i class="cb"></i></span>
-    <span>Fiche de Mise à jour <i class="cb"></i></span>
+    <span>Fiche de Création <i class="cb{% if etat.f3_fiche_creation_oui %} on{% endif %}"></i></span>
+    <span>Fiche de Mise à jour <i class="cb{% if etat.f3_fiche_creation_non %} on{% endif %}"></i></span>
   </div>
   <div class="row"><span class="lbl">Nom du Commercial ( Chargé d'affaires)</span><span class="val">{{ dossier.charge_affaires_snapshot }}</span></div>
-  <div class="row" style="margin-top: 3mm;"><span>Consultation de la Centrale des incidents de paiement avant ouverture (CIP) / Oui <i class="cb"></i> &nbsp;&nbsp;&nbsp; Non <i class="cb"></i></span></div>
-  <div class="row"><span>Consultation AMPLITUDE / Oui <i class="cb"></i> &nbsp;&nbsp;&nbsp; Non <i class="cb"></i></span></div>
+  <div class="row" style="margin-top: 3mm;"><span>Consultation de la Centrale des incidents de paiement avant ouverture (CIP) / Oui <i class="cb{% if etat.f3_consultation_cip_oui %} on{% endif %}"></i> &nbsp;&nbsp;&nbsp; Non <i class="cb{% if etat.f3_consultation_cip_non %} on{% endif %}"></i></span></div>
+  <div class="row"><span>Consultation AMPLITUDE / Oui <i class="cb{% if etat.f3_consultation_amplitude_oui %} on{% endif %}"></i> &nbsp;&nbsp;&nbsp; Non <i class="cb{% if etat.f3_consultation_amplitude_non %} on{% endif %}"></i></span></div>
 
   <div class="row" style="margin-top: 3mm; gap: 20mm;">
     <span class="gras">Formule demandée : {{ dossier.get_formule_produit_display }}</span>
@@ -82,13 +82,13 @@
         <div class="row"><span class="lbl">Locataire <i class="cb{% if etat.logement_locataire %} on{% endif %}"></i> Propriétaire <i class="cb{% if etat.logement_proprietaire %} on{% endif %}"></i> Autre <i class="cb{% if etat.logement_autre %} on{% endif %}"></i></span></div>
         <div class="row" style="margin-left: 8mm;"><i class="cb{% if etat.resident_bf_oui %} on{% endif %}"></i> Résident BF</div>
         <div class="row" style="margin-left: 8mm;"><i class="cb{% if etat.resident_bf_non %} on{% endif %}"></i> Non résident</div>
-        <div class="row"><span class="lbl">Pays de résidence :</span><span class="val">{{ dossier.pays_residence }}</span></div>
+        <div class="row"><span class="lbl">Pays de résidence fiscale :</span><span class="val">{{ dossier.pays_residence_fiscale }}</span></div>
         <div class="row"><span class="lbl">Nationalité :</span><span class="val">{{ dossier.nationalite }}</span></div>
         <div class="row"><span>le client a-t-il une autre nationalité ?</span></div>
         <div class="row"><span>Oui <i class="cb{% if etat.autre_nationalite_oui %} on{% endif %}"></i> &nbsp;&nbsp;&nbsp; Non <i class="cb{% if etat.autre_nationalite_non %} on{% endif %}"></i></span></div>
         <div class="row"><span class="lbl">laquelle :</span><span class="val">{{ dossier.autre_nationalite }}</span></div>
         <div class="row"><span class="val"></span></div>
-        <div class="row"><span class="lbl">Profession :</span><span class="val">{{ dossier.profession }}</span></div>
+        <div class="row"><span class="lbl">Situation professionnelle du client (justificatifs) :</span><span class="val">{{ dossier.profession }}</span></div>
         <div class="row" style="gap: 6mm;"><span>Salarié <i class="cb{% if etat.categorie_salarie_prive or etat.categorie_salarie_public %} on{% endif %}"></i></span><span>Profession libérale <i class="cb{% if etat.categorie_liberale %} on{% endif %}"></i></span><span>Retraité <i class="cb{% if etat.categorie_retraite %} on{% endif %}"></i></span></div>
         <div class="row" style="gap: 6mm;"><span>Activité commerciale <i class="cb{% if etat.categorie_commerciale %} on{% endif %}"></i></span><span>Si oui laquelle :</span><span class="val">{{ dossier.activite_commerciale }}</span></div>
       </div>
@@ -107,14 +107,11 @@
         <div class="row"><span class="lbl">Adresse postale :</span><span class="val">{{ dossier.boite_postale }}</span></div>
         <div class="row"><span class="val"></span></div>
         <div class="row"><span class="lbl">Procuration donnée : Oui <i class="cb{% if etat.procuration_oui %} on{% endif %}"></i> Non <i class="cb{% if etat.procuration_non %} on{% endif %}"></i></span></div>
-        <div class="row"><span class="lbl">Nature de la relation / numéro de compte :</span><span class="val">{{ dossier.procuration_details }}</span></div>
-        <div class="row"><span class="lbl">Contact d'urgence 1 :</span><span class="val">{{ dossier.urgence_nom_1 }}</span></div>
-        <div class="row"><span class="lbl">Profession / lieu de travail :</span><span class="val">{{ dossier.urgence_prof_1 }}{% if dossier.urgence_lieu_travail_1 %} — {{ dossier.urgence_lieu_travail_1 }}{% endif %}</span></div>
-        <div class="row"><span class="val"></span></div>
-        <div class="row"><span class="lbl">Téléphone / adresse :</span><span class="val">{{ dossier.urgence_tel_1 }}{% if dossier.urgence_adresse_1 %} — {{ dossier.urgence_adresse_1 }}{% endif %}</span></div>
-        <div class="row"><span class="lbl">Contact d'urgence 2 :</span><span class="val">{{ dossier.urgence_nom_2 }}</span></div>
-        <div class="row"><span class="lbl">Profession / lieu de travail :</span><span class="val">{{ dossier.urgence_prof_2 }}{% if dossier.urgence_lieu_travail_2 %} — {{ dossier.urgence_lieu_travail_2 }}{% endif %}</span></div>
-        <div class="row"><span class="lbl">Téléphone / adresse :</span><span class="val">{{ dossier.urgence_tel_2 }}{% if dossier.urgence_adresse_2 %} — {{ dossier.urgence_adresse_2 }}{% endif %}</span></div>
+        <div class="row"><span class="lbl">Nature de la relation / numéro du compte concerné :</span><span class="val">{{ dossier.procuration_details }}</span></div>
+      </div>
+      <div class="cel">
+        <div class="row"><span class="lbl">Personnes à contacter en cas de besoin :</span><span class="val">{{ dossier.urgence_nom_1 }}</span></div>
+        <div class="row"><span class="lbl">Numéro de téléphone :</span><span class="val">{{ dossier.urgence_tel_1 }}</span></div>
       </div>
       <div class="cel cel-titre">Au titre de FATCA</div>
       <div class="cel">
@@ -137,7 +134,7 @@
         <div class="row"><span class="val"></span></div>
         <div class="row"><span class="lbl">Employeur :</span><span class="val">{{ dossier.employeur }}</span></div>
         <div class="row"><span class="val"></span></div>
-        <div class="row"><span class="lbl">Adresse professionnelle :</span><span class="val">{{ dossier.adresse_employeur }}</span></div>
+        <div class="row"><span class="lbl">Secteur d'activité et adresse :</span><span class="val">{{ dossier.secteur_activite }}{% if dossier.secteur_activite and dossier.adresse_employeur %} — {% endif %}{{ dossier.adresse_employeur }}</span></div>
         <div class="row"><span class="val"></span></div>
       </div>
       <div class="cel cel-titre">Salaire et autres sources de revenus</div>
@@ -226,44 +223,45 @@
 
   <div class="row" style="justify-content: space-between;">
     <span>* S'agit-il d'une personnalité politiquement exposée et active ou d'un de ses proches ?</span>
-    <span>Oui <i class="cb{% if etat.ppe_oui %} on{% endif %}"></i> &nbsp;&nbsp; Non <i class="cb{% if etat.ppe_non %} on{% endif %}"></i></span>
+    <span>Oui <i class="cb{% if etat.f3_risque_ppe_oui %} on{% endif %}"></i> &nbsp;&nbsp; Non <i class="cb{% if etat.f3_risque_ppe_non %} on{% endif %}"></i></span>
   </div>
   <div class="row" style="justify-content: space-between;">
     <span>* S'agit-il d'une personne dont les ressources de revenus sont multiples et diverses ?</span>
-    <span>Oui <i class="cb"></i> &nbsp;&nbsp; Non <i class="cb"></i></span>
+    <span>Oui <i class="cb{% if etat.f3_risque_revenus_multiples_oui %} on{% endif %}"></i> &nbsp;&nbsp; Non <i class="cb{% if etat.f3_risque_revenus_multiples_non %} on{% endif %}"></i></span>
   </div>
   <div class="row" style="justify-content: space-between;">
     <span>* S'agit-il d'une personne exerçant une activité à risque élevé (conf procédure) ?</span>
-    <span>Oui <i class="cb"></i> &nbsp;&nbsp; Non <i class="cb"></i></span>
+    <span>Oui <i class="cb{% if etat.f3_risque_activite_oui %} on{% endif %}"></i> &nbsp;&nbsp; Non <i class="cb{% if etat.f3_risque_activite_non %} on{% endif %}"></i></span>
   </div>
   <div class="row" style="justify-content: space-between;">
     <span>* Existe-il une autre raison de classer le client en risque élevé ? (si oui, laquelle?)</span>
-    <span>Oui <i class="cb"></i> &nbsp;&nbsp; Non <i class="cb"></i></span>
+    <span>Oui <i class="cb{% if etat.f3_risque_autre_oui %} on{% endif %}"></i> &nbsp;&nbsp; Non <i class="cb{% if etat.f3_risque_autre_non %} on{% endif %}"></i></span>
+    {% if dossier.f3_risque_autre_detail %}<span>Précisions : {{ dossier.f3_risque_autre_detail }}</span>{% endif %}
   </div>
 
   <p style="margin-top: 3mm;">* S'agit-il d'un client sensible ou d'un client (personne morale) dont le siège social figure sur la liste des pays à risques. (Annexe procédures des opérations). Après consultation Logiciel dans AMPLITUDE.</p>
-  <div class="liste-cb"><div><i class="cb"></i> Oui</div><div><i class="cb"></i> Non</div></div>
+  <div class="liste-cb"><div><i class="cb{% if etat.f3_risque_pays_oui %} on{% endif %}"></i> Oui</div><div><i class="cb{% if etat.f3_risque_pays_non %} on{% endif %}"></i> Non</div></div>
 
   <p style="margin-top: 3mm;">- Si oui : envoie une copie du KYC au service conformité avec les informations nécessaires</p>
 
   <div class="row" style="margin-top: 5mm; gap: 20mm;">
     <span style="width: 50mm;">Niveau de risque attribué au client</span>
-    <span>réduit <i class="cb"></i></span>
-    <span style="margin-left: 25mm;">élevé <i class="cb"></i></span>
+    <span>réduit <i class="cb{% if dossier.f3_niveau_risque == 'REDUIT' %} on{% endif %}"></i></span>
+    <span style="margin-left: 25mm;">élevé <i class="cb{% if dossier.f3_niveau_risque == 'ELEVE' %} on{% endif %}"></i></span>
   </div>
   <p style="margin: 4mm 0 4mm 70mm;">* le fonctionnement des comptes de clients classés en risque élevé, doit faire l'objet d'un suivi particulier.<br>Le fonctionnement desdits comptes doit également faire l'objet d'un rapport semestriel.</p>
 
-  <div class="row"><span class="lbl">Niveau de risque en cas de révision :</span><span class="val"></span></div>
+  <div class="row"><span class="lbl">Niveau de risque en cas de révision :</span><span class="val">{{ dossier.f3_niveau_risque_revision }}</span></div>
 
   <div class="row" style="margin-top: 5mm; gap: 20mm;">
     <span style="width: 50mm;">Niveau de profil attribué au client</span>
-    <span>réduit <i class="cb"></i></span>
-    <span style="margin-left: 25mm;">élevé <i class="cb"></i></span>
+    <span>réduit <i class="cb{% if dossier.f3_niveau_profil == 'REDUIT' %} on{% endif %}"></i></span>
+    <span style="margin-left: 25mm;">élevé <i class="cb{% if dossier.f3_niveau_profil == 'ELEVE' %} on{% endif %}"></i></span>
   </div>
 
   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 8mm;">
-    <div>Nom Prénoms date de signature<br>Gestionnaire de compte</div>
-    <div><br>Chef d'Agence</div>
+    <div>Nom et prénoms : {{ dossier.f3_agent_nom }}<br>Date : {{ dossier.f3_agent_date_signature|date:"d/m/Y" }}<br><br>Gestionnaire de compte</div>
+    <div>Nom et prénoms : {{ dossier.f3_chef_agence_nom }}<br><br>Chef d'Agence</div>
     <div><br>AML</div>
   </div>
 

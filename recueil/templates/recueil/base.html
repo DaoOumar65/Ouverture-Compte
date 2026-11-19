@@ -26,7 +26,7 @@
     {# Libellé espace agence (centre) #}
     <div class="topbar-workspace">
       <span class="workspace-dot"></span>
-      Ouverture de compte
+      {% if user.is_staff %}Administration{% else %}Ouverture de compte{% endif %}
       <span class="topbar-divider">/</span>
       BCB
     </div>
@@ -34,16 +34,6 @@
     {# Zone utilisateur (droite) #}
     {% if user.is_authenticated %}
     <div class="topbar-user">
-
-      {# Liens admin #}
-      {% if user.is_staff %}
-      <nav class="topbar-nav" aria-label="Administration">
-        <a class="topbar-nav-link {% block nav_journal %}{% endblock %}"
-           href="{% url 'recueil:journal-audit' %}">Journal d'audit</a>
-        <a class="topbar-nav-link {% block nav_gestionnaires %}{% endblock %}"
-           href="{% url 'recueil:gestion-utilisateurs' %}">Gestionnaires</a>
-      </nav>
-      {% endif %}
 
       {# Infos utilisateur #}
       <div class="topbar-user-info">
@@ -65,20 +55,58 @@
 
   </header>
 
-  {% if messages %}
-    <div class="messages" role="status" aria-live="polite">
-      {% for message in messages %}
-        <div class="message {% if message.tags == 'error' %}message-error{% endif %}">{{ message }}</div>
-      {% endfor %}
+  <div class="app-frame{% if user.is_staff %} app-frame-admin{% endif %}">
+    {% if user.is_staff %}
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-heading">
+        <span class="admin-mark">B</span>
+        <span><strong>Administration</strong><small>ESPACE DE PILOTAGE</small></span>
+      </div>
+      <div class="admin-nav-label">GESTION</div>
+      <nav class="admin-nav" aria-label="Menus administrateur">
+        <a class="admin-nav-link{% if request.resolver_match.url_name == 'dossier-list' %} is-active{% endif %}" href="{% url 'recueil:dossier-list' %}"{% if request.resolver_match.url_name == 'dossier-list' %} aria-current="page"{% endif %}>
+          <span class="admin-menu-icon" aria-hidden="true">▤</span><span>Dossiers</span>
+        </a>
+        <a class="admin-nav-link{% if 'gestionnaire-' in request.resolver_match.url_name or request.resolver_match.url_name == 'gestion-utilisateurs' %} is-active{% endif %}" href="{% url 'recueil:gestion-utilisateurs' %}"{% if 'gestionnaire-' in request.resolver_match.url_name or request.resolver_match.url_name == 'gestion-utilisateurs' %} aria-current="page"{% endif %}>
+          <span class="admin-menu-icon" aria-hidden="true">♙</span><span>Gestionnaires</span>
+        </a>
+        <a class="admin-nav-link{% if request.resolver_match.url_name == 'journal-audit' %} is-active{% endif %}" href="{% url 'recueil:journal-audit' %}"{% if request.resolver_match.url_name == 'journal-audit' %} aria-current="page"{% endif %}>
+          <span class="admin-menu-icon" aria-hidden="true">◷</span><span>Journal d’audit</span>
+        </a>
+      </nav>
+      <div class="admin-nav-label admin-nav-label-secondary">CONFIGURATION</div>
+      <nav class="admin-nav" aria-label="Configuration">
+        <a class="admin-nav-link" href="{% url 'admin:recueil_agence_changelist' %}">
+          <span class="admin-menu-icon" aria-hidden="true">⌖</span><span>Agences</span>
+        </a>
+        <a class="admin-nav-link" href="{% url 'admin:index' %}">
+          <span class="admin-menu-icon" aria-hidden="true">⚙</span><span>Administration avancée</span>
+        </a>
+      </nav>
+      <div class="admin-sidebar-foot">
+        <span class="admin-sidebar-foot-dot"></span>
+        <span>Session administrateur</span>
+      </div>
+    </aside>
+    {% endif %}
+
+    <div class="app-main">
+      {% if messages %}
+        <div class="messages" role="status" aria-live="polite">
+          {% for message in messages %}
+            <div class="message {% if message.tags == 'error' %}message-error{% endif %}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <main class="page-shell">{% block content %}{% endblock %}</main>
+
+      <footer class="site-footer">
+        <span>BCB · Banque Commerciale du Burkina</span>
+        <span>Informations confidentielles — accès réservé au personnel habilité</span>
+      </footer>
     </div>
-  {% endif %}
-
-  <main class="page-shell">{% block content %}{% endblock %}</main>
-
-  <footer class="site-footer">
-    <span>BCB · Banque Commerciale du Burkina</span>
-    <span>Informations confidentielles — accès réservé au personnel habilité</span>
-  </footer>
+  </div>
 
   {% block scripts %}{% endblock %}
 </body>

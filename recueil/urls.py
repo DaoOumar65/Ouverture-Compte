@@ -15,6 +15,7 @@ urlpatterns = [
     path("utilisateurs/<int:pk>/modifier/", views.gestionnaire_modifier, name="gestionnaire-modifier"),
     # Dossiers
     path("dossiers/<uuid:pk>/imprimer/", views.dossier_print, name="dossier-print"),
+    path("dossiers/<uuid:pk>/enregistrer/", views.dossier_confirmer, name="dossier-confirmer"),
     path("dossiers/<uuid:pk>/impression/marquer/", views.dossier_impression_marquer, name="dossier-impression-marquer"),
     path("dossiers/<uuid:pk>/signer/", views.dossier_signer, name="dossier-signer"),
     path("dossiers/<uuid:pk>/reprendre/", views.dossier_reprendre, name="dossier-reprendre"),

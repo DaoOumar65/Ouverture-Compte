@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<title>BCB – Prévisualisation avant validation</title>
+<title>BCB – Formulaires générés</title>
 {% load static %}
 <style>
   @page { size: A4; margin: 10mm 12mm; }
@@ -38,6 +38,7 @@
     display: flex; align-items: center; gap: 6px;
   }
   .btn-corriger:hover { background: rgb(255 255 255 / 25%); }
+  .btn-imprimer { background: #e8f5e9; color: #14532d; border: 1px solid #86c995; border-radius: 4px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
   .sep { color: rgb(255 255 255 / 30%); font-size: 20px; }
 
   /* ---- Pages ---- */
@@ -67,11 +68,11 @@
   .f1 { font-family: "Times New Roman", Times, serif; font-size: 10.5pt; }
   .f1 h1 { text-align: center; font-size: 14pt; text-decoration: underline; margin: 14mm 0 8mm; letter-spacing: .2mm; }
   .f1 .cadre td.g { width: 31%; font-style: italic; font-weight: bold; text-transform: uppercase; vertical-align: middle; }
-  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 9.5pt; }
-  .f1 .cadre td { padding: .7mm 1mm; }
-  .f1 .cadre tr.h9 td { height: 6mm; padding: .5mm 1mm; vertical-align: middle; }
-  .f1 .cadre td .row { margin: .15mm 0; line-height: 1; }
-  .f1 .cadre td .val { min-height: 2.5mm; padding: 0 .5mm; }
+  .f1 .cadre td.d { font-family: Arial, Helvetica, sans-serif; font-weight: bold; font-size: 10pt; overflow-wrap: anywhere; }
+  .f1 .cadre td { padding: 1.4mm 2mm; }
+  .f1 .cadre tr.h9 td { min-height: 7mm; height: 7mm; padding: 1.2mm 2mm; vertical-align: middle; }
+  .f1 .cadre td .row { margin: .8mm 0; line-height: 1.15; }
+  .f1 .cadre td .val { min-height: 4mm; padding: .5mm 1mm; white-space: normal; overflow-wrap: anywhere; }
   .f1 .yn { display: flex; gap: 2mm; margin: .2mm 0; font-weight: bold; font-family: "Times New Roman", Times, serif; line-height: 1; }
   .f1 .yn .q { width: 52mm; }
   .f1 .yn .o { width: 20mm; }
@@ -90,8 +91,8 @@
 
   /* ---- F3 ---- */
   .f3 { font-size: 8.3pt; }
-  .f3 .row { margin: .7mm 0; }
-  .f3 .val { min-height: 3.6mm; }
+  .f3 .row { margin: .9mm 0; flex-wrap: wrap; }
+  .f3 .val { min-height: 4.2mm; padding: .4mm 1mm; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; }
   .f3 .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }
   .f3 .entete-kyc .bandeau { flex: 1; background: #d9d9d9; border: 1px solid #000; text-align: center; font: bold 13pt "Times New Roman", serif; display: flex; align-items: center; justify-content: center; padding: 2mm; }
   .f3 .titre-section { border: 1px solid #000; outline: 1px solid #000; outline-offset: 1px; text-align: center; font-weight: bold; font-size: 11pt; padding: 1mm; margin: 2mm 1mm 3mm; }
@@ -109,8 +110,8 @@
   .f4 h1 { text-align: center; font-size: 11pt; font-weight: normal; margin: 6mm 0 10mm; }
   .f4 h2 { font-size: 10.5pt; font-weight: normal; margin: 8mm 0 5mm; }
   .f4 h2 span { text-decoration: underline; margin-left: 12mm; }
-  .f4 .row { margin: 3.2mm 0; }
-  .f4 .val { font-weight: bold; }
+  .f4 .row { margin: 3.2mm 0; flex-wrap: wrap; line-height: 1.25; }
+  .f4 .val { font-weight: bold; min-height: 5mm; padding: .7mm 1.5mm; white-space: normal; overflow-wrap: anywhere; }
 
   /* ---- F5 ---- */
   .f5 { border: .3mm solid #000; padding: 8mm; }
@@ -134,9 +135,10 @@
 {# Barre d'action sticky #}
 <div class="barre-preview">
   <div class="titre">
-    Prévisualisation des formulaires
-    <span class="sous-titre">Vérifiez toutes les informations avant de valider. Aucune donnée n'a encore été enregistrée.</span>
+    Formulaires générés
+    <span class="sous-titre">Vérifiez les formulaires, imprimez-les ou enregistrez-les comme dossier créé.</span>
   </div>
+  <button type="button" class="btn-imprimer" onclick="window.print()">Imprimer / Télécharger PDF</button>
 
   {% if pk %}
     <a class="btn-corriger" href="{% url 'recueil:dossier-edit' pk %}">← Corriger</a>
@@ -144,7 +146,7 @@
     <form method="post" action="{% url 'recueil:dossier-edit' pk %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="confirm">
-      <button type="submit" class="btn-valider">✓ Valider et créer le dossier</button>
+      <button type="submit" class="btn-valider">✓ Enregistrer</button>
     </form>
   {% else %}
     <a class="btn-corriger" href="{% url 'recueil:dossier-create' %}">← Corriger</a>
@@ -152,7 +154,7 @@
     <form method="post" action="{% url 'recueil:dossier-create' %}">
       {% csrf_token %}
       <input type="hidden" name="action" value="confirm">
-      <button type="submit" class="btn-valider">✓ Valider et créer le dossier</button>
+      <button type="submit" class="btn-valider">✓ Enregistrer</button>
     </form>
   {% endif %}
 </div>
