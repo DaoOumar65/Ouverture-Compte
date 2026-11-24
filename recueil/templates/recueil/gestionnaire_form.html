@@ -31,8 +31,8 @@
     <a class="rail-link" href="#identite"><span class="rail-number">1</span> Identité &amp; accès</a>
     <a class="rail-link" href="#rattachement"><span class="rail-number">2</span> Rattachement agence</a>
     {% if is_edit %}
-    <a class="rail-link" href="#securite"><span class="rail-number">3</span> Mot de passe</a>
-    <a class="rail-link" href="#statut"><span class="rail-number">4</span> Statut du compte</a>
+    {% if not ad_mode %}<a class="rail-link" href="#securite"><span class="rail-number">3</span> Mot de passe</a>{% endif %}
+    <a class="rail-link" href="#statut"><span class="rail-number">{% if ad_mode %}3{% else %}4{% endif %}</span> Statut du compte</a>
     {% endif %}
   </nav>
 
@@ -107,6 +107,7 @@
 
     {# Section 3 — Mot de passe (création et édition) #}
     {% if is_edit %}
+    {% if not ad_mode %}
     <section class="form-section" id="securite">
       <div class="section-heading">
         <div class="section-index">3</div>
@@ -118,12 +119,18 @@
       <div class="field-grid">
         <div class="field-wrap">
           <label for="id_new_password1">Nouveau mot de passe</label>
-          <input type="password" name="new_password1" id="id_new_password1" class="form-control" autocomplete="new-password">
+          <div class="password-input-wrap">
+            <input type="password" name="new_password1" id="id_new_password1" class="form-control" autocomplete="new-password">
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+          </div>
           {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
         </div>
         <div class="field-wrap">
           <label for="id_new_password2">Confirmer le mot de passe</label>
-          <input type="password" name="new_password2" id="id_new_password2" class="form-control" autocomplete="new-password">
+          <div class="password-input-wrap">
+            <input type="password" name="new_password2" id="id_new_password2" class="form-control" autocomplete="new-password">
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+          </div>
           {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
         </div>
         <div class="field-wrap field-wide">
@@ -131,11 +138,12 @@
         </div>
       </div>
     </section>
+    {% endif %}
 
     {# Section 4 — Statut #}
     <section class="form-section" id="statut">
       <div class="section-heading">
-        <div class="section-index">4</div>
+        <div class="section-index">{% if ad_mode %}3{% else %}4{% endif %}</div>
         <div>
           <h2>Statut du compte</h2>
           <p>Un compte désactivé ne peut plus se connecter.</p>
@@ -165,12 +173,18 @@
       <div class="field-grid">
         <div class="field-wrap">
           <label for="{{ password_form.new_password1.id_for_label }}">Mot de passe <span style="color:var(--red)">*</span></label>
-          {{ password_form.new_password1 }}
+          <div class="password-input-wrap">
+            {{ password_form.new_password1 }}
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+          </div>
           {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
         </div>
         <div class="field-wrap">
           <label for="{{ password_form.new_password2.id_for_label }}">Confirmer <span style="color:var(--red)">*</span></label>
-          {{ password_form.new_password2 }}
+          <div class="password-input-wrap">
+            {{ password_form.new_password2 }}
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+          </div>
           {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
         </div>
         <div class="field-wrap field-wide">

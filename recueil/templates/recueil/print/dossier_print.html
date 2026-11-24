@@ -29,8 +29,8 @@
   .logo { display: flex; align-items: center; gap: 3mm; }
   .logo-img { height: 12mm; width: auto; }
   .logo .nom-banque { font-size: 7.5pt; font-weight: bold; }
-  .cb { display: inline-block; position: relative; width: 3.4mm; height: 3.4mm; border: .35mm solid #000; vertical-align: -0.7mm; margin: 0 1mm; background: #fff; }
-  .cb.on::after { content: "X"; position: absolute; left: 0; right: 0; top: -.15mm; text-align: center; font: bold 3.3mm/3.5mm Arial, sans-serif; }
+  .cb { display: inline-block; position: relative; box-sizing: border-box; flex: 0 0 4mm; width: 4mm; height: 4mm; border: .35mm solid #000; vertical-align: -0.7mm; margin: 0 1mm; background: #fff; }
+  .cb.on::after { content: "X"; position: absolute; left: 0; right: 0; top: 0; text-align: center; font: bold 3mm/3mm Arial, sans-serif; }
   .row { display: flex; align-items: baseline; gap: 1.5mm; margin: 1.1mm 0; }
   .lbl { white-space: nowrap; }
   .val { flex: 1; min-height: 4.2mm; border-bottom: 1px dotted #000; padding: 0 1mm; font-weight: bold; }
@@ -62,14 +62,18 @@
   .f2 .entete .logo { justify-content: center; flex-direction: column; gap: 1mm; }
   .f2 .entete .logo img { height: 18mm; }
   .f2 h1 { font-size: 10.5pt; text-align: center; margin: 5mm 0 6mm; }
-  .f2 .cons { display: flex; gap: 2mm; margin: 2.6mm 0; text-align: justify; }
-  .f2 .cons .cb { flex: none; margin-top: .6mm; }
+  .f2 .cons { display: flex; align-items: flex-start; gap: 2mm; margin: 2.6mm 0; text-align: justify; min-width: 0; }
+  .f2 .cons > span { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+  .f2 .cons .cb { flex: 0 0 4mm; margin: .6mm 0 0; }
   .f2 .note { border-top: 1px solid #000; width: 55mm; margin-top: 12mm; padding-top: 1mm; font-size: 7.5pt; }
   .f2 .bas { font-size: 7.5pt; }
   .f2 .sig { margin-top: 4mm; }
 
   /* ---------- F3 ---------- */
   .f3 { font-size: 8.3pt; }
+  .f3 .versement-ouverture { margin: 1.5mm 0; }
+  .f3 .versement-ouverture .lbl { display: block; white-space: normal; margin-bottom: 1mm; font-weight: bold; }
+  .f3 .versement-ouverture .val { display: block; min-height: 7mm; padding: 1mm 2mm; border: 1px dotted #000; line-height: 1.3; overflow-wrap: anywhere; }
   .f3 .row { margin: .9mm 0; flex-wrap: wrap; }
   .f3 .val { min-height: 4.2mm; padding: .4mm 1mm; font-size: 9pt; white-space: normal; overflow-wrap: anywhere; }
   .f3 .entete-kyc { display: flex; align-items: stretch; gap: 3mm; margin-bottom: 3mm; }

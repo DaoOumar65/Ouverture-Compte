@@ -3,6 +3,7 @@ import json
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator
 from django.db import transaction
@@ -24,7 +25,7 @@ from .forms import (
     build_dossier_reference,
     new_dossier_reference,
 )
-from .models import DossierAuditEvent, DossierClient, UserProfile
+from .models import ADAccessRequest, Agence, DossierAuditEvent, DossierClient, UserProfile
 from .permissions import (
     ADMIN_GROUP,
     admin_required,
@@ -47,6 +48,8 @@ FORM_SECTIONS = (
         "ville_residence", "pays_residence", "pays_residence_fiscale", "secteur", "quartier", "rue", "porte",
         "repere_proximite", "adresse", "resident_bf", "statut_logement",
         "justificatif_domicile", "a_autre_nationalite", "autre_nationalite",
+        "contact_diaspora_pays", "contact_diaspora_nom", "contact_diaspora_adresse",
+        "contact_diaspora_domicile", "contact_diaspora_telephone_fixe", "contact_diaspora_telephone_mobile",
         "telephone", "telephone_secondaire", "telephone_domicile",
         "telephone_bureau", "email", "boite_postale",
     )),
@@ -55,7 +58,7 @@ FORM_SECTIONS = (
         "secteur_activite", "adresse_employeur", "poste_occupe", "date_embauche", "revenu_mensuel",
     )),
     ("revenus", "Autres revenus & opérations", (
-        "revenus_immobiliers", "revenus_mobiliers", "recettes_commerciales",
+        "revenus_ailleurs", "revenus_immobiliers", "revenus_mobiliers", "recettes_commerciales",
         "indemnites", "autres_revenus", "montant_versement_initial",
         "nature_versement_initial", "operations_habituelles",
         "mandat_administrateur", "societes_administrees", "est_actionnaire",
@@ -186,16 +189,16 @@ DETAIL_SECTIONS = (
         ("Date d'embauche du conjoint", "conjoint_date_embauche"),
         ("Tranche de revenu du conjoint", "conjoint_tranche_revenu"),
         ("Nombre d'enfants", "nombre_enfants"), ("Prénoms des enfants", "enfants_noms"),
-        ("Urgence 1 — Nom", "urgence_nom_1"), ("Urgence 1 — Téléphone", "urgence_tel_1"),
-        ("Urgence 1 — Profession", "urgence_prof_1"), ("Urgence 1 — Lieu de travail", "urgence_lieu_travail_1"),
-        ("Urgence 1 — Adresse", "urgence_adresse_1"),
-        ("Urgence 1 - Telephone secondaire", "urgence_tel_2_1"),
-        ("Urgence 1 - Secteur", "urgence_secteur_1"),
-        ("Urgence 1 - Quartier", "urgence_quartier_1"),
-        ("Urgence 1 - Detail explicatif", "urgence_detail_1"),
-        ("Urgence 2 — Nom", "urgence_nom_2"), ("Urgence 2 — Téléphone", "urgence_tel_2"),
-        ("Urgence 2 — Profession", "urgence_prof_2"), ("Urgence 2 — Lieu de travail", "urgence_lieu_travail_2"),
-        ("Urgence 2 — Adresse", "urgence_adresse_2"),
+        ("Personne à prévenir 1 — Nom", "urgence_nom_1"), ("Personne à prévenir 1 — Téléphone", "urgence_tel_1"),
+        ("Personne à prévenir 1 — Profession", "urgence_prof_1"), ("Personne à prévenir 1 — Lieu de travail", "urgence_lieu_travail_1"),
+        ("Personne à prévenir 1 — Adresse", "urgence_adresse_1"),
+        ("Personne à prévenir 1 - Téléphone secondaire", "urgence_tel_2_1"),
+        ("Personne à prévenir 1 - Secteur", "urgence_secteur_1"),
+        ("Personne à prévenir 1 - Quartier", "urgence_quartier_1"),
+        ("Personne à prévenir 1 - Détail explicatif", "urgence_detail_1"),
+        ("Personne à prévenir 2 — Nom", "urgence_nom_2"), ("Personne à prévenir 2 — Téléphone", "urgence_tel_2"),
+        ("Personne à prévenir 2 — Profession", "urgence_prof_2"), ("Personne à prévenir 2 — Lieu de travail", "urgence_lieu_travail_2"),
+        ("Personne à prévenir 2 — Adresse", "urgence_adresse_2"),
     )),
     ("Entreprise & mandataire", (
         ("Raison sociale", "pm_raison_sociale"), ("Sigle", "pm_sigle"),
@@ -245,22 +248,22 @@ DETAIL_SECTIONS = (
 )
 
 FORMULAIRES_IMPRIMABLES = (
-    ("f1", "F1 – Renseignements complémentaires"),
-    ("f2", "F2 – Consentement CREDITINFO"),
-    ("f3", "F3 – Fiche KYC personne physique"),
-    ("f4", "F4 – Fiche de localisation client"),
-    ("f5", "F5 – Plan de repérage"),
+    ("f1", "F1 \u2013 Renseignements compl\u00e9mentaires"),
+    ("f2", "F2 \u2013 Consentement CREDITINFO"),
+    ("f3", "F3 \u2013 Fiche KYC personne physique"),
+    ("f4", "F4 \u2013 Fiche de localisation client"),
+    ("f5", "F5 \u2013 Plan de rep\u00e9rage"),
 )
 
 FORMULAIRES_IMPRIMABLES_COMM = (
     ("cover", "Demande d'ouverture de compte"),
     ("kyc_pm", "KYC Personne Morale (3 pages)"),
-    ("f2", "F2 – Consentement CREDITINFO PM"),
+    ("f2", "F2 \u2013 Consentement CREDITINFO PM"),
     ("f4", "Fiche de localisation mandataire"),
-    ("f5", "Plan de repérage"),
-    ("f1", "F1 – Renseignements complémentaires"),
-    ("kyc_pp", "KYC Personne Physique mandataire"),
-    ("specimen", "Spécimen de signature"),
+    ("f5", "Plan de rep\u00e9rage"),
+    ("f1", "F1 \u2013 Renseignements compl\u00e9mentaires du mandataire"),
+    ("kyc_pp", "KYC du mandataire \u2013 Personne Physique"),
+    ("specimen", "Sp\u00e9cimen de signature"),
     ("convention", "Convention de compte courant"),
 )
 
@@ -296,15 +299,53 @@ def _form_context(form, dossier=None):
         form.initial.get("type_compte") or form.data.get("type_compte")
     )
     sections = []
-    for anchor, title, names in FORM_SECTIONS:
+    commercial = type_compte == DossierClient.TypeCompte.COMMERCIAL
+    commercial_order = ("compte", "entreprise", "identite", "coordonnees", "activite", "revenus", "relation", "famille", "conformite", "consentements", "controle-agent")
+    section_definitions = list(FORM_SECTIONS)
+    if commercial:
+        section_definitions.sort(key=lambda item: commercial_order.index(item[0]))
+    commercial_titles = {
+        "compte": "Compte de l\u2019entreprise",
+        "identite": "Identit\u00e9 du mandataire & pi\u00e8ce",
+        "coordonnees": "R\u00e9sidence & contact du mandataire",
+        "activite": "Activit\u00e9 professionnelle du mandataire",
+        "revenus": "Revenus du mandataire & op\u00e9rations",
+        "relation": "Historique bancaire & entr\u00e9e en relation du mandataire",
+        "famille": "Famille du mandataire & contacts \u00e0 pr\u00e9venir",
+    }
+    for anchor, title, names in section_definitions:
+        if commercial:
+            title = commercial_titles.get(anchor, title)
         if anchor == "entreprise" and type_compte != DossierClient.TypeCompte.COMMERCIAL:
             continue
-        sections.append({
+        section_fields = [form[name] for name in names if not (
+            anchor == "coordonnees"
+              and (
+                  (type_compte == DossierClient.TypeCompte.COMMERCIAL and name == "pays_residence")
+                  or (type_compte != DossierClient.TypeCompte.COMMERCIAL and name.startswith("contact_diaspora_"))
+              )
+        )]
+        section = {
             "anchor": anchor,
             "title": title,
-            "fields": [form[name] for name in names],
+            "fields": section_fields,
             "business": anchor == "entreprise",
-        })
+        }
+        if anchor == "famille":
+            contact_one_names = (
+                "urgence_nom_1", "urgence_tel_1", "urgence_prof_1",
+                "urgence_lieu_travail_1", "urgence_adresse_1", "urgence_tel_2_1",
+                "urgence_secteur_1", "urgence_quartier_1", "urgence_detail_1",
+            )
+            contact_two_names = (
+                "urgence_nom_2", "urgence_tel_2", "urgence_prof_2",
+                "urgence_lieu_travail_2", "urgence_adresse_2",
+            )
+            contact_names = set(contact_one_names + contact_two_names)
+            section["family_fields"] = [field for field in section_fields if field.name not in contact_names]
+            section["contact_one"] = [form[name] for name in contact_one_names]
+            section["contact_two"] = [form[name] for name in contact_two_names]
+        sections.append(section)
     return {
         "form": form,
         "sections": sections,
@@ -774,6 +815,11 @@ def _contexte_impression(dossier):
         "enfants_noms": enfants_noms,
         "suite_enfants": tous_les_prenoms[5:],
         "date_impression": timezone.localdate(),
+        "diaspora": dossier.resident_bf is False,
+        "montant_versement_initial_affiche": (
+            f"{dossier.montant_versement_initial:,.0f}".replace(",", "\u202f")
+            if dossier.montant_versement_initial is not None else ""
+        ),
         "etat": _etat_cases_impression(dossier),
     }
 
@@ -827,7 +873,11 @@ def dossier_print(request, pk):
 
     if dossier.type_compte == DossierClient.TypeCompte.COMMERCIAL:
         codes = [code for code, _ in FORMULAIRES_IMPRIMABLES_COMM]
-        choisis = [c for c in request.GET.getlist("f") if c in codes] or codes
+        # Lors de la première génération, préparer systématiquement le dossier
+        # commercial complet. La sélection reste disponible pour les réimpressions.
+        choisis = codes if en_generation else (
+            [c for c in request.GET.getlist("f") if c in codes] or codes
+        )
         try:
             copies = max(1, min(5, int(request.GET.get("copies", 3))))
         except ValueError:
@@ -986,6 +1036,72 @@ def journal_audit(request):
 
 @never_cache
 @admin_required
+def demandes_acces(request):
+    demandes = (
+        ADAccessRequest.objects.filter(status=ADAccessRequest.Status.PENDING)
+        .select_related("user", "user__profile")
+        .order_by("requested_at")
+    )
+    return render(request, "recueil/demandes_acces.html", {
+        "demandes": demandes,
+        "agences": Agence.objects.filter(active=True).order_by("numero"),
+    })
+
+
+@never_cache
+@admin_required
+@transaction.atomic
+@require_POST
+def traiter_demande_acces(request, pk):
+    demande = get_object_or_404(
+        ADAccessRequest.objects.select_for_update(),
+        pk=pk,
+        status=ADAccessRequest.Status.PENDING,
+    )
+    decision = request.POST.get("decision")
+    if decision == "approve":
+        agence = get_object_or_404(
+            Agence,
+            pk=request.POST.get("agence"),
+            active=True,
+        )
+        user = demande.user
+        profile = user.profile
+        profile.ad_access_approved = True
+        profile.agence = agence
+        profile.nom_affiche = user.get_full_name() or user.get_username()
+        profile.save(update_fields=("ad_access_approved", "agence", "nom_affiche"))
+
+        groupe, _ = Group.objects.get_or_create(name="GESTIONNAIRE")
+        user.groups.add(groupe)
+        user.set_unusable_password()
+        user.save(update_fields=("password",))
+
+        demande.status = ADAccessRequest.Status.APPROVED
+        action = DossierAuditEvent.Action.ACCES_APPROUVE
+        message = f"L'accès de {user.get_username()} a été approuvé."
+    elif decision == "reject":
+        demande.status = ADAccessRequest.Status.REJECTED
+        action = DossierAuditEvent.Action.ACCES_REJETE
+        message = f"La demande d'accès de {demande.user.get_username()} a été refusée."
+    else:
+        messages.error(request, "Choisissez une décision valide.")
+        return redirect("recueil:demandes-acces")
+
+    demande.reviewed_by = request.user
+    demande.reviewed_at = timezone.now()
+    demande.save(update_fields=("status", "reviewed_by", "reviewed_at"))
+    _journaliser(action, request.user, details={
+        "demande_acces_id": demande.pk,
+        "utilisateur_concerne": demande.user.get_username(),
+        "agence": str(demande.user.profile.agence) if decision == "approve" else "",
+    })
+    messages.success(request, message)
+    return redirect("recueil:demandes-acces")
+
+
+@never_cache
+@admin_required
 def gestion_utilisateurs(request):
     """Liste tous les gestionnaires (groupe GESTIONNAIRE)."""
     User = get_user_model()
@@ -996,6 +1112,10 @@ def gestion_utilisateurs(request):
     )
     return render(request, "recueil/gestion_utilisateurs.html", {
         "gestionnaires": gestionnaires,
+        "ad_mode": settings.AUTH_MODE == "AD",
+        "demandes_acces_en_attente": ADAccessRequest.objects.filter(
+            status=ADAccessRequest.Status.PENDING
+        ).count(),
     })
 
 
@@ -1003,6 +1123,10 @@ def gestion_utilisateurs(request):
 @admin_required
 def gestionnaire_creer(request):
     """Création d'un nouveau gestionnaire avec rattachement agence."""
+    if settings.AUTH_MODE == "AD":
+        messages.info(request, "Les gestionnaires se connectent avec leur compte AD. Traitez leur demande d'accès après leur première connexion.")
+        return redirect("recueil:demandes-acces")
+
     if request.method == "POST":
         form = GestionnaireUserForm(request.POST)
         profile_form = UserProfileForm(request.POST)
@@ -1059,18 +1183,19 @@ def gestionnaire_modifier(request, pk):
         groups__name="GESTIONNAIRE",
     )
     profile = gestionnaire.profile
+    ad_mode = settings.AUTH_MODE == "AD"
 
     if request.method == "POST":
         form = GestionnaireUserForm(request.POST, instance=gestionnaire)
         profile_form = UserProfileForm(request.POST, instance=profile)
-        password_form = GestionnairePasswordForm(request.POST)
+        password_form = None if ad_mode else GestionnairePasswordForm(request.POST)
 
-        if form.is_valid() and profile_form.is_valid() and password_form.is_valid():
+        if form.is_valid() and profile_form.is_valid() and (ad_mode or password_form.is_valid()):
             form.save()
             profile.nom_affiche = profile_form.cleaned_data.get("nom_affiche", "")
             profile.agence = profile_form.cleaned_data.get("agence")
             profile.save()
-            if password_form.has_new_password():
+            if not ad_mode and password_form.has_new_password():
                 gestionnaire.set_password(password_form.cleaned_data["new_password1"])
                 gestionnaire.save(update_fields=["password"])
             messages.success(request, f"Le gestionnaire « {gestionnaire.get_full_name() or gestionnaire.username} » a été mis à jour.")
@@ -1078,7 +1203,7 @@ def gestionnaire_modifier(request, pk):
     else:
         form = GestionnaireUserForm(instance=gestionnaire)
         profile_form = UserProfileForm(instance=profile)
-        password_form = GestionnairePasswordForm()
+        password_form = None if ad_mode else GestionnairePasswordForm()
 
     return render(request, "recueil/gestionnaire_form.html", {
         "form": form,
@@ -1086,4 +1211,5 @@ def gestionnaire_modifier(request, pk):
         "password_form": password_form,
         "gestionnaire": gestionnaire,
         "is_edit": True,
+        "ad_mode": ad_mode,
     })

@@ -1,0 +1,12 @@
+<div class="field-wrap
+  {% if field.field.widget.input_type == 'checkbox' %}field-checkbox{% endif %}
+  {% if field.name in 'adresse,repere_proximite,pm_activite_principale,operations_habituelles,societes_administrees,societes_actionnaire,autres_comptes_bancaires,enfants_noms,procuration_details,parrainage_tiers,client_introduit_par,f3_risque_autre_detail,f3_niveau_risque_revision' %}field-wide{% endif %}">
+  {% if field.field.widget.input_type == "checkbox" %}
+    <label class="checkbox-label">{{ field }}<span>{{ field.label }}</span></label>
+  {% else %}
+    {{ field.label_tag }}
+    {{ field }}
+  {% endif %}
+  {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
+  {% if field.errors %}<small id="{{ field.id_for_label }}-errors" class="field-error">{{ field.errors|join:", " }}</small>{% endif %}
+</div>

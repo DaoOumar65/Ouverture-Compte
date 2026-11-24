@@ -1,6 +1,7 @@
 import uuid
 
 from django import forms
+from django.conf import settings
 from django.utils import timezone
 
 from .models import DossierClient
@@ -163,6 +164,14 @@ class DossierClientForm(forms.ModelForm):
                 empty_value=None,
                 widget=TaggedRadioSelect(attrs={"data-field-name": name}),
             )
+        self.fields["revenus_ailleurs"] = forms.TypedChoiceField(
+            label=self.fields["revenus_ailleurs"].label,
+            required=False,
+            choices=[("True", "Oui"), ("False", "Non")],
+            coerce=lambda value: value == "True",
+            empty_value=None,
+            widget=TaggedRadioSelect(attrs={"data-field-name": "revenus_ailleurs"}),
+        )
         self.fields["f3_fiche_creation"] = forms.TypedChoiceField(
             label="Type de fiche KYC",
             required=False,
@@ -184,6 +193,12 @@ class DossierClientForm(forms.ModelForm):
             required_fields = list(IDENTITY_REQUIRED_FOR_GENERATION)
             if cleaned.get("type_compte") == DossierClient.TypeCompte.COMMERCIAL:
                 required_fields.extend(COMMERCIAL_REQUIRED_FOR_GENERATION)
+                if cleaned.get("resident_bf") is False:
+                    required_fields.extend((
+                        "contact_diaspora_pays", "contact_diaspora_nom",
+                        "contact_diaspora_adresse", "contact_diaspora_domicile",
+                        "contact_diaspora_telephone_fixe",
+                    ))
             for name in required_fields:
                 if not cleaned.get(name):
                     self.add_error(name, "Ce champ est requis pour générer les formulaires.")
@@ -262,6 +277,11 @@ class DossierClientForm(forms.ModelForm):
                         "enfants_noms",
                         "Précisez les prénoms des enfants.",
                     )
+            if cleaned.get("revenus_ailleurs") is None:
+                self.add_error("revenus_ailleurs", "Réponse requise (Oui ou Non) pour générer les formulaires.")
+            elif cleaned.get("revenus_ailleurs") is False:
+                for name in ("revenus_immobiliers", "revenus_mobiliers", "recettes_commerciales", "indemnites", "autres_revenus"):
+                    cleaned[name] = 0
             # False est une réponse valide : on teste uniquement l'absence de réponse.
             for name in (*DECLARATIONS, *CONSENTEMENTS_CREDITINFO):
                 if cleaned.get(name) is None:
@@ -307,6 +327,28 @@ class DossierCommercialForm(DossierClientForm):
     def __init__(self, *args, **kwargs):
         kwargs["fixed_type"] = DossierClient.TypeCompte.COMMERCIAL
         super().__init__(*args, **kwargs)
+        mandataire_labels = {
+            "nom": "Nom du mandataire",
+            "prenoms": "Prénom(s) du mandataire",
+            "sexe": "Sexe du mandataire",
+            "date_naissance": "Date de naissance du mandataire",
+            "lieu_naissance": "Lieu de naissance du mandataire",
+            "pays_naissance": "Pays de naissance du mandataire",
+            "nationalite": "Nationalité du mandataire",
+            "type_piece": "Pièce d'identité du mandataire",
+            "numero_piece": "Numéro de pièce du mandataire",
+            "ville_residence": "Ville de résidence du mandataire",
+            "pays_residence_fiscale": "Pays de résidence fiscale du mandataire",
+            "telephone": "Téléphone mobile du mandataire",
+            "email": "Adresse email du mandataire",
+            "categorie_client": "Catégorie professionnelle du mandataire",
+            "profession": "Situation professionnelle du mandataire (justificatifs)",
+            "revenu_mensuel": "Salaire net mensuel du mandataire (FCFA)",
+            "revenus_ailleurs": "Le mandataire a-t-il d'autres revenus ?",
+        }
+        for name, label in mandataire_labels.items():
+            if name in self.fields:
+                self.fields[name].label = label
 
 
 def new_dossier_reference():
@@ -370,6 +412,10 @@ class GestionnaireUserForm(forms.ModelForm):
         self.fields["first_name"].required = True
         self.fields["email"].required = False
         self.fields["is_active"].label = "Compte actif"
+        if settings.AUTH_MODE == "AD" and self.instance.pk:
+            for name in ("username", "first_name", "last_name", "email"):
+                self.fields[name].disabled = True
+                self.fields[name].help_text = "Valeur issue d'Active Directory."
         if not self.instance.pk:
             self.fields.pop("is_active", None)
 

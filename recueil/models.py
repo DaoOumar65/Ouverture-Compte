@@ -170,6 +170,12 @@ class DossierClient(models.Model):
     pays_residence_fiscale = models.CharField(
         "Pays de résidence fiscale", max_length=80, blank=True,
     )
+    contact_diaspora_pays = models.CharField("Contact diaspora — pays de résidence", max_length=80, blank=True)
+    contact_diaspora_nom = models.CharField("Contact diaspora — nom et prénom", max_length=150, blank=True)
+    contact_diaspora_adresse = models.CharField("Contact diaspora — adresse postale", max_length=200, blank=True)
+    contact_diaspora_domicile = models.CharField("Contact diaspora — domicile (ville, lot, quartier)", max_length=200, blank=True)
+    contact_diaspora_telephone_fixe = models.CharField("Contact diaspora — téléphone fixe", max_length=30, blank=True)
+    contact_diaspora_telephone_mobile = models.CharField("Contact diaspora — téléphone mobile", max_length=30, blank=True)
     secteur = models.CharField("Secteur", max_length=40, blank=True)
     quartier = models.CharField("Quartier", max_length=100, blank=True)
     rue = models.CharField("Rue / Avenue", max_length=100, blank=True)
@@ -219,6 +225,7 @@ class DossierClient(models.Model):
     poste_occupe = models.CharField("Poste occupé", max_length=100, blank=True)
     date_embauche = models.DateField("Date d'embauche", null=True, blank=True)
     revenu_mensuel = models.DecimalField("Salaire net mensuel (FCFA)", max_digits=14, decimal_places=2, null=True, blank=True)
+    revenus_ailleurs = models.BooleanField("Le client a-t-il d'autres revenus ?", null=True, blank=True)
 
     # =========================================================================
     # 4. REVENUS, OPÉRATIONS & RELATION BANCAIRE
@@ -329,21 +336,21 @@ class DossierClient(models.Model):
     )
 
     # Contacts d'urgence (propagés dans Renseignements & Localisation)
-    urgence_nom_1 = models.CharField("Urgence 1 - Nom et prénoms", max_length=150, blank=True)
-    urgence_tel_1 = models.CharField("Urgence 1 - Téléphone", max_length=30, blank=True)
-    urgence_prof_1 = models.CharField("Urgence 1 - Profession", max_length=120, blank=True)
-    urgence_lieu_travail_1 = models.CharField("Urgence 1 - Lieu de travail", max_length=150, blank=True)
-    urgence_adresse_1 = models.CharField("Urgence 1 - Adresse", max_length=120, blank=True)
-    urgence_tel_2_1 = models.CharField("Urgence 1 - Téléphone secondaire", max_length=30, blank=True)
-    urgence_secteur_1 = models.CharField("Urgence 1 - Secteur", max_length=40, blank=True)
-    urgence_quartier_1 = models.CharField("Urgence 1 - Quartier", max_length=100, blank=True)
-    urgence_detail_1 = models.TextField("Urgence 1 - Détail explicatif", blank=True)
+    urgence_nom_1 = models.CharField("Personne à prévenir 1 - Nom et prénoms", max_length=150, blank=True)
+    urgence_tel_1 = models.CharField("Personne à prévenir 1 - Téléphone", max_length=30, blank=True)
+    urgence_prof_1 = models.CharField("Personne à prévenir 1 - Profession", max_length=120, blank=True)
+    urgence_lieu_travail_1 = models.CharField("Personne à prévenir 1 - Lieu de travail", max_length=150, blank=True)
+    urgence_adresse_1 = models.CharField("Personne à prévenir 1 - Adresse", max_length=120, blank=True)
+    urgence_tel_2_1 = models.CharField("Personne à prévenir 1 - Téléphone secondaire", max_length=30, blank=True)
+    urgence_secteur_1 = models.CharField("Personne à prévenir 1 - Secteur", max_length=40, blank=True)
+    urgence_quartier_1 = models.CharField("Personne à prévenir 1 - Quartier", max_length=100, blank=True)
+    urgence_detail_1 = models.TextField("Personne à prévenir 1 - Détail explicatif", blank=True)
 
-    urgence_nom_2 = models.CharField("Urgence 2 - Nom et prénoms", max_length=150, blank=True)
-    urgence_tel_2 = models.CharField("Urgence 2 - Téléphone", max_length=30, blank=True)
-    urgence_prof_2 = models.CharField("Urgence 2 - Profession", max_length=120, blank=True)
-    urgence_lieu_travail_2 = models.CharField("Urgence 2 - Lieu de travail", max_length=150, blank=True)
-    urgence_adresse_2 = models.CharField("Urgence 2 - Secteur/Quartier", max_length=120, blank=True)
+    urgence_nom_2 = models.CharField("Personne à prévenir 2 - Nom et prénoms", max_length=150, blank=True)
+    urgence_tel_2 = models.CharField("Personne à prévenir 2 - Téléphone", max_length=30, blank=True)
+    urgence_prof_2 = models.CharField("Personne à prévenir 2 - Profession", max_length=120, blank=True)
+    urgence_lieu_travail_2 = models.CharField("Personne à prévenir 2 - Lieu de travail", max_length=150, blank=True)
+    urgence_adresse_2 = models.CharField("Personne à prévenir 2 - Secteur/Quartier", max_length=120, blank=True)
 
     # =========================================================================
     # 6. ENTREPRISE / PERSONNE MORALE (SI COMPTE COMMERCIAL)
@@ -478,6 +485,10 @@ class UserProfile(models.Model):
         related_name="profile",
     )
     nom_affiche = models.CharField("Nom affiché", max_length=150, blank=True)
+    ad_access_approved = models.BooleanField(
+        "Accès AD approuvé", default=False,
+        help_text="L'utilisateur peut accéder à l'application après validation par un administrateur.",
+    )
     agence = models.ForeignKey(
         Agence,
         on_delete=models.SET_NULL,
@@ -499,6 +510,41 @@ class UserProfile(models.Model):
         return self.agence.numero if self.agence else ""
 
 
+class ADAccessRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "PENDING", "En attente"
+        APPROVED = "APPROVED", "Approuvée"
+        REJECTED = "REJECTED", "Refusée"
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="demandes_acces_ad",
+    )
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="demandes_acces_ad_traitees",
+    )
+
+    class Meta:
+        ordering = ["requested_at"]
+        verbose_name = "Demande d'accès AD"
+        verbose_name_plural = "Demandes d'accès AD"
+        constraints = [
+            models.UniqueConstraint(
+                fields=("user",),
+                condition=models.Q(status="PENDING"),
+                name="unique_pending_ad_access_per_user",
+            ),
+        ]
+
+
 class DossierAuditEvent(models.Model):
     class Action(models.TextChoices):
         CREATION = "CREATION", "Création"
@@ -509,6 +555,9 @@ class DossierAuditEvent(models.Model):
         SIGNATURE = "SIGNATURE", "Signature"
         REUTILISATION = "REUTILISATION", "Réutilisation"
         RECHERCHE_CLIENT = "RECHERCHE_CLIENT", "Recherche client"
+        ACCES_DEMANDE = "ACCES_DEMANDE", "Demande d'accès AD"
+        ACCES_APPROUVE = "ACCES_APPROUVE", "Accès AD approuvé"
+        ACCES_REJETE = "ACCES_REJETE", "Demande d'accès AD refusée"
         SUPPRESSION = "SUPPRESSION", "Suppression (brouillon)"
 
     dossier = models.ForeignKey(

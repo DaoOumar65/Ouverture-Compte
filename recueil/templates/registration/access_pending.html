@@ -1,0 +1,16 @@
+{% extends "recueil/base.html" %}
+{% block title %}Accès en attente · BCB{% endblock %}
+{% block content %}
+<section class="empty-state" style="max-width:720px;margin:48px auto;background:#fff;border:1px solid var(--line);padding:36px;">
+  <span class="status status-brouillon"><span class="status-dot"></span>Accès en attente</span>
+  <h1 style="margin-top:18px;">Demande transmise à l’administration</h1>
+  {% if demande_creee %}
+    <p>Vos identifiants Active Directory sont valides. Un administrateur doit approuver votre accès et vous rattacher à une agence avant que vous puissiez ouvrir votre session.</p>
+  {% else %}
+    <p>Vos identifiants Active Directory sont valides. Votre demande est toujours en attente de validation par un administrateur.</p>
+  {% endif %}
+  {% if rejet_precedent %}<p>Une demande précédente a été refusée. Une nouvelle demande vient d’être transmise.</p>{% endif %}
+  <p>Vous pourrez vous connecter dès que l’approbation aura été enregistrée.</p>
+  <a class="button button-outline" href="{% url 'login' %}">Retour à la connexion</a>
+</section>
+{% endblock %}

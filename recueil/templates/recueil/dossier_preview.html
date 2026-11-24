@@ -138,8 +138,7 @@
     Formulaires générés
     <span class="sous-titre">Vérifiez les formulaires, imprimez-les ou enregistrez-les comme dossier créé.</span>
   </div>
-  <button type="button" class="btn-imprimer" onclick="window.print()">Imprimer / Télécharger PDF</button>
-
+  <button type="button" class="btn-imprimer" onclick="window.print()">Imprimer / T&eacute;l&eacute;charger PDF</button>
   {% if pk %}
     <a class="btn-corriger" href="{% url 'recueil:dossier-edit' pk %}">← Corriger</a>
     <span class="sep">|</span>
@@ -166,8 +165,8 @@
   {% if 'f2' in choisis %}{% for n in copies_range %}{% include "recueil/print/_comm_f2.html" %}{% endfor %}{% endif %}
   {% if 'f4' in choisis %}{% include "recueil/print/_comm_localisation.html" %}{% endif %}
   {% if 'f5' in choisis %}{% include "recueil/print/_f5.html" %}{% endif %}
-  {% if 'f1' in choisis %}{% include "recueil/print/_f1.html" %}{% endif %}
-  {% if 'kyc_pp' in choisis %}{% include "recueil/print/_f3.html" %}{% endif %}
+  {% if 'f1' in choisis %}{% include "recueil/print/_comm_f1.html" %}{% endif %}
+  {% if 'kyc_pp' in choisis %}{% include "recueil/print/_comm_kyc_pp.html" %}{% endif %}
   {% if 'specimen' in choisis %}{% include "recueil/print/_comm_specimen.html" %}{% endif %}
   {% if 'convention' in choisis %}{% include "recueil/print/_comm_convention.html" %}{% endif %}
 {% else %}

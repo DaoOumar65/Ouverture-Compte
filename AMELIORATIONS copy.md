@@ -70,3 +70,23 @@ Au niveau de plan de reperage, tu as ajouter au formulaire des champs au dessus 
 Au niveau d'identification du client, le champ proximité n'exite pas dans le formulaire generé et les infos s'assurer que les infos remplie parte dans les champs dediée et qu'on ne retrouve pas le numero de secteur dans adresse. Verifie la conformité avec l'original.
 
 Dans la partie KYC au niveau du 2/3 sur l'original il y'a des infos manquantes sur le generer donc non conforme, compare et assure toi que tout est Ok 
+
+
+
+
+
+
+
+
+
+
+
+A ce niveau dans le document generer Coordonnées du client et infos sur l'employeur:  supprime le champs Pays de résidence et garde seulement Pays de residence fiscale. Egalement pour Profession mets le terme 'Situation Professionnelle du client (justificatifs)'.
+
+
+Au niveau de la page  2/3 du KYC le champs Adresse professionnelle doit etre Secteur d'acitivité et adresse, ce qui veut dire qu'il faut ajouter secteur d'activité dans le formulaire qui sera appélé a ce niveau avec l'adresse.
+
+
+A ce niveau il y'a une confusion d'informations, s'il y'a une procuration on doit donner les informations lui concernant conformement au champs demande dans le fichier original sinon les ecritures restent sans que le champ ne soit rempli, de ce fait tu ne dois pas recuperer les informations de celui a prevenir en cas de besoin pour coller a ce niveau ce qui n'est pas conforme.Donc revoit ça.
+
+Je constate que quand je veux modifier un dossier, les dates disparaissent et qu'il faut ressaisir a nouveau, analyse correctement et corrige ce problème.

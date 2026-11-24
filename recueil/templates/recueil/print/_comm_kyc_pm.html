@@ -59,15 +59,17 @@
     <span class="lbl" style="margin-left:5mm;">Cel :</span><span class="val">{{ dossier.telephone }}</span>
   </div>
 
-  <div style="margin-top:3mm; margin-bottom:1mm; margin-left:5mm;"><span class="souligne">• Dans le pays de résidence (pour les clients de la diaspora)</span></div>
-  <div class="row"><span class="lbl" style="min-width:38mm;">Pays de résidence :</span><span class="val">{{ dossier.pays_residence }}</span></div>
-  <div class="row"><span class="lbl" style="min-width:38mm;">Nom et prénom :</span><span class="val"></span></div>
-  <div class="row"><span class="lbl" style="min-width:38mm;">Adresse postale :</span><span class="val"></span></div>
-  <div class="row"><span class="lbl" style="min-width:38mm;">Domicile (ville ; lot ; quartier) :</span><span class="val"></span></div>
+  {% if diaspora %}
+  <div style="margin-top:3mm; margin-bottom:1mm; margin-left:5mm;"><span class="souligne">&bull; Dans le pays de r&eacute;sidence (pour les clients de la diaspora)</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Pays de r&eacute;sidence :</span><span class="val">{{ dossier.contact_diaspora_pays }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Nom et pr&eacute;nom :</span><span class="val">{{ dossier.contact_diaspora_nom }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Adresse postale :</span><span class="val">{{ dossier.contact_diaspora_adresse }}</span></div>
+  <div class="row"><span class="lbl" style="min-width:38mm;">Domicile (ville ; lot ; quartier) :</span><span class="val">{{ dossier.contact_diaspora_domicile }}</span></div>
   <div class="row">
-    <span class="lbl" style="min-width:38mm;">Tél fixe :</span><span class="val"></span>
-    <span class="lbl" style="margin-left:5mm;">Cel :</span><span class="val"></span>
+    <span class="lbl" style="min-width:38mm;">T&eacute;l fixe :</span><span class="val">{{ dossier.contact_diaspora_telephone_fixe }}</span>
+    <span class="lbl" style="margin-left:5mm;">Cel :</span><span class="val">{{ dossier.contact_diaspora_telephone_mobile }}</span>
   </div>
+  {% endif %}
 
   <div style="margin-top:3mm; margin-bottom:1mm;"><span class="gras">Références bancaires : (chez le confrère)</span></div>
   <div class="row"><span class="lbl" style="min-width:38mm;">Banque :</span><span class="val">{{ dossier.autres_comptes_bancaires }}</span></div>

@@ -17,17 +17,20 @@
   <div class="login-panel">
     <span class="login-step">ACCÈS SÉCURISÉ</span>
     <h2>Connexion</h2>
-    <p>Connectez-vous avec vos identifiants agence.</p>
+    {% if ad_mode %}<p>Utilisez votre compte Active Directory : identifiant AD et mot de passe du domaine.</p>{% else %}<p>Connectez-vous avec vos identifiants agence.</p>{% endif %}
     {% if form.errors %}
       <div class="form-alert" role="alert">Nom d'utilisateur ou mot de passe incorrect.</div>
     {% endif %}
     <form method="post" class="login-form">
       {% csrf_token %}
       <input type="hidden" name="next" value="{{ next }}">
-      <label for="{{ form.username.id_for_label }}">Nom d'utilisateur</label>
+      <label for="{{ form.username.id_for_label }}">{% if ad_mode %}Identifiant AD (compte, UPN ou BCB\compte){% else %}Nom d'utilisateur{% endif %}</label>
       {{ form.username }}
       <label for="{{ form.password.id_for_label }}">Mot de passe</label>
-      {{ form.password }}
+      <div class="password-input-wrap">
+        {{ form.password }}
+        <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+      </div>
       <button type="submit" class="button button-primary">
         Ouvrir ma session <span aria-hidden="true">→</span>
       </button>
@@ -36,3 +39,4 @@
   </div>
 </section>
 {% endblock %}
+{% block scripts %}<script src="{% static 'recueil/app.js' %}"></script>{% endblock %}

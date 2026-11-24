@@ -8,7 +8,7 @@
     <div>
       <div class="eyebrow"><span class="eyebrow-line"></span> OUVERTURE DE COMPTE · {% if is_edit %}{{ dossier.reference }}{% else %}NOUVEAU DOSSIER{% endif %}</div>
       <h1>{% if is_edit %}Modifier le dossier {{ dossier.get_type_compte_display }}{% elif type_compte == 'COMMERCIAL' %}Nouveau dossier commercial{% else %}Nouveau dossier particulier{% endif %}</h1>
-      <p class="page-intro">Renseignez les informations disponibles, puis générez les formulaires pour les vérifier avant de les enregistrer.</p>
+      <p class="page-intro">{% if type_compte == "COMMERCIAL" %}Renseignez les informations de l&rsquo;entreprise et de son mandataire pour pr&eacute;parer les formulaires commerciaux.{% else %}Renseignez les informations disponibles, puis g&eacute;n&eacute;rez les formulaires pour les v&eacute;rifier avant de les enregistrer.{% endif %}</p>
     </div>
     {% if dossier %}<span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span>{% endif %}
   </div>
@@ -65,34 +65,44 @@
           <span class="section-index">{{ forloop.counter|stringformat:"02d" }}</span>
           <div>
             <h2>{{ section.title }}</h2>
-            {% if section.anchor == "identite" %}<p>Identité du client ou du représentant légal.</p>
-            {% elif section.anchor == "entreprise" %}<p>À renseigner pour un compte commercial.</p>
-            {% elif section.anchor == "coordonnees" %}<p>Les réponses de résidence, logement et nationalité sont demandées pour le KYC.</p>
-            {% elif section.anchor == "revenus" %}<p>Renseignez les montants et activités connus ; laissez vide ce qui ne s'applique pas.</p>
-            {% elif section.anchor == "relation" %}<p>Ces réponses complètent les rubriques d'entrée en relation, de procuration et d'antécédents bancaires.</p>
-            {% elif section.anchor == "famille" %}<p>Complétez les renseignements sur le conjoint et les enfants selon la situation du client.</p>
-            {% elif section.anchor == "conformite" %}<p>Déclarations à recueillir auprès du client.</p>
-            {% elif section.anchor == "consentements" %}<p>Formulaire de consentement CREDITINFO à lire au client et à faire confirmer.</p>
-            {% elif section.anchor == "controle-agent" %}<p>Contrôles internes facultatifs à renseigner par le gestionnaire lorsqu'ils sont effectués ou connus.</p>
+            {% if section.anchor == "identite" and type_compte == "COMMERCIAL" %}<p>Identit&eacute; du mandataire et de ses pi&egrave;ces justificatives.</p>
+            {% elif section.anchor == "identite" %}<p>Identit&eacute; du client ou du repr&eacute;sentant l&eacute;gal.</p>
+            {% elif section.anchor == "entreprise" %}<p>Informations de la personne morale, de ses activit&eacute;s et de son mandataire.</p>
+            {% elif section.anchor == "coordonnees" and type_compte == "COMMERCIAL" %}<p>R&eacute;sidence, coordonn&eacute;es et r&eacute;sidence fiscale du mandataire.</p>
+            {% elif section.anchor == "coordonnees" %}<p>Les r&eacute;ponses de r&eacute;sidence, logement et nationalit&eacute; sont demand&eacute;es pour le KYC.</p>
+            {% elif section.anchor == "revenus" and type_compte == "COMMERCIAL" %}<p>Revenus personnels du mandataire et op&eacute;rations pr&eacute;vues sur le compte de l&rsquo;entreprise.</p>
+            {% elif section.anchor == "revenus" %}<p>Indiquez si le client a d&rsquo;autres revenus. Les montants concern&eacute;s s&rsquo;affichent apr&egrave;s la r&eacute;ponse.</p>
+            {% elif section.anchor == "relation" %}<p>Ces r&eacute;ponses compl&egrave;tent les rubriques d&rsquo;entr&eacute;e en relation, de procuration et d&rsquo;ant&eacute;c&eacute;dents bancaires.</p>
+            {% elif section.anchor == "famille" and type_compte == "COMMERCIAL" %}<p>Renseignements familiaux du mandataire et personnes &agrave; pr&eacute;venir.</p>
+            {% elif section.anchor == "famille" %}<p>Compl&eacute;tez les renseignements sur le conjoint et les enfants selon la situation du client.</p>
+            {% elif section.anchor == "conformite" %}<p>D&eacute;clarations &agrave; recueillir aupr&egrave;s du client.</p>
+            {% elif section.anchor == "consentements" %}<p>Formulaire de consentement CREDITINFO &agrave; lire au client et &agrave; faire confirmer.</p>
+            {% elif section.anchor == "controle-agent" %}<p>Contr&ocirc;les internes facultatifs &agrave; renseigner par le gestionnaire lorsqu'ils sont effectu&eacute;s ou connus.</p>
             {% endif %}
           </div>
         </div>
-        <div class="field-grid">
-          {% for field in section.fields %}
-            <div class="field-wrap
-              {% if field.field.widget.input_type == 'checkbox' %}field-checkbox{% endif %}
-              {% if field.name in 'adresse,repere_proximite,pm_activite_principale,operations_habituelles,societes_administrees,societes_actionnaire,autres_comptes_bancaires,enfants_noms,procuration_details,parrainage_tiers,client_introduit_par,f3_risque_autre_detail,f3_niveau_risque_revision' %}field-wide{% endif %}">
-              {% if field.field.widget.input_type == "checkbox" %}
-                <label class="checkbox-label">{{ field }}<span>{{ field.label }}</span></label>
-              {% else %}
-                {{ field.label_tag }}
-                {{ field }}
-              {% endif %}
-              {% if field.help_text %}<small class="field-help">{{ field.help_text }}</small>{% endif %}
-              {% if field.errors %}<small id="{{ field.id_for_label }}-errors" class="field-error">{{ field.errors|join:", " }}</small>{% endif %}
+        {% if section.anchor == "famille" %}
+          <div class="field-grid">
+            {% for field in section.family_fields %}{% include "recueil/_dossier_field.html" %}{% endfor %}
+          </div>
+          <div class="contact-people-grid">
+            <div class="contact-person">
+              <h3>Personne à prévenir 1</h3>
+              {% for field in section.contact_one %}{% include "recueil/_dossier_field.html" %}{% endfor %}
             </div>
-          {% endfor %}
-        </div>
+            <div class="contact-person">
+              <h3>Personne à prévenir 2</h3>
+              {% for field in section.contact_two %}{% include "recueil/_dossier_field.html" %}{% endfor %}
+            </div>
+          </div>
+        {% else %}
+          {% if section.anchor == "consentements" %}
+          <div class="consent-tools"><button type="button" class="button button-outline" data-consent-check-all>Tout sélectionner — Oui</button><span>Vous pouvez ensuite modifier individuellement chaque réponse selon le choix du client.</span></div>
+          {% endif %}
+          <div class="field-grid">
+            {% for field in section.fields %}{% include "recueil/_dossier_field.html" %}{% endfor %}
+          </div>
+        {% endif %}
       </section>
     {% endfor %}
 
@@ -112,4 +122,4 @@
 
 </form>
 {% endblock %}
-{% block scripts %}<script src="{% static 'recueil/app.js' %}?v=2" defer></script>{% endblock %}
+{% block scripts %}<script src="{% static 'recueil/app.js' %}?v=5" defer></script>{% endblock %}

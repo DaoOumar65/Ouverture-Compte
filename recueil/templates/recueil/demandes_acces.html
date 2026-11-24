@@ -1,0 +1,49 @@
+{% extends "recueil/base.html" %}
+{% block title %}Demandes d'accès AD · BCB{% endblock %}
+{% block content %}
+<section class="page-heading">
+  <div>
+    <div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION</div>
+    <h1>Demandes d'accès</h1>
+    <p class="page-intro">Les identifiants AD ont été vérifiés. Approuvez les collaborateurs autorisés et rattachez-les à leur agence.</p>
+  </div>
+  <a class="button button-outline" href="{% url 'recueil:gestion-utilisateurs' %}">Gestionnaires</a>
+</section>
+
+{% if demandes %}
+  <div class="access-request-list">
+    {% for demande in demandes %}
+    <article class="access-request-card">
+      <div class="access-request-identity">
+        <span class="status status-brouillon"><span class="status-dot"></span>En attente</span>
+        <h2>{{ demande.user.get_full_name|default:demande.user.username }}</h2>
+        <p><strong>Identifiant AD :</strong> {{ demande.user.username }}{% if demande.user.email %}<br><strong>Courriel :</strong> {{ demande.user.email }}{% endif %}</p>
+        <small>Demande reçue le {{ demande.requested_at|date:"d/m/Y à H:i" }}</small>
+      </div>
+      <div class="access-request-actions">
+        <form method="post" action="{% url 'recueil:traiter-demande-acces' demande.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="decision" value="approve">
+          <label for="agence-{{ demande.pk }}">Agence à rattacher</label>
+          <select id="agence-{{ demande.pk }}" name="agence" required>
+            <option value="">— Choisir une agence —</option>
+            {% for agence in agences %}<option value="{{ agence.pk }}">{{ agence.numero }} — {{ agence.nom }}</option>{% endfor %}
+          </select>
+          <button class="button button-primary" type="submit">Approuver l'accès</button>
+        </form>
+        <form method="post" action="{% url 'recueil:traiter-demande-acces' demande.pk %}" onsubmit="return confirm('Refuser cette demande d’accès ?');">
+          {% csrf_token %}
+          <input type="hidden" name="decision" value="reject">
+          <button class="button button-danger" type="submit">Refuser</button>
+        </form>
+      </div>
+    </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-state" style="background:#fff;border:1px solid var(--line);padding:44px 24px;">
+    <h2>Aucune demande en attente</h2>
+    <p>Les nouvelles demandes d'accès validées par Active Directory apparaîtront ici.</p>
+  </div>
+{% endif %}
+{% endblock %}

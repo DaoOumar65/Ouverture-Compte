@@ -158,6 +158,11 @@ h1 { margin-bottom: 8px; font-family: Georgia, "Times New Roman", serif; font-si
 .section-heading h2 { margin: 2px 0 3px; font-family: Georgia, serif; font-size: 20px; font-weight: 500; letter-spacing: -.01em; }
 .section-heading p { margin: 0; color: var(--muted); font-size: 11px; }
 .field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px 18px; }
+.contact-people-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+.contact-person { min-width: 0; padding: 16px; border: 1px solid #dce5e2; background: #f8faf8; }
+.contact-person h3 { margin: 0 0 14px; padding-bottom: 10px; color: var(--bcb-teal-dark); border-bottom: 1px solid #dce5e2; font-size: 13px; font-weight: 700; }
+.contact-person .field-wrap { margin-bottom: 14px; }
+.contact-person .field-wrap:last-child { margin-bottom: 0; }
 .field-wrap { min-width: 0; }
 /* Champs conditionnels : transition douce d'apparition */
 .field-wrap[hidden] { display: none !important; }
@@ -246,6 +251,10 @@ textarea.form-control { min-height: 78px; resize: vertical; }
 .login-form { display: flex; flex-direction: column; gap: 8px; }
 .login-form label { margin-top: 6px; color: var(--ink-soft); font-size: 11px; font-weight: 650; }
 .login-form input { width: 100%; height: 42px; padding: 0 11px; border: 1px solid #cfd9d1; border-radius: 2px; }
+.password-input-wrap { position: relative; display: flex; align-items: center; }
+.password-input-wrap input { width: 100%; padding-right: 86px; }
+.password-toggle { position: absolute; right: 8px; border: 0; background: transparent; color: var(--bcb-teal-dark); cursor: pointer; font: inherit; font-size: 11px; font-weight: 700; padding: 6px; }
+.password-toggle:focus-visible { outline: 2px solid var(--bcb-teal); outline-offset: 2px; }
 .login-form .button { margin-top: 13px; }
 .login-privacy { display: block; margin-top: 17px; color: var(--muted); font-size: 10px; }
 
@@ -296,6 +305,9 @@ textarea.form-control { min-height: 78px; resize: vertical; }
   .intake-layout { padding-bottom: 145px; }
   .form-section { padding: 18px 15px; }
   .field-grid { grid-template-columns: 1fr; gap: 14px; }
+  .contact-people-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .contact-person { padding: 10px 8px; }
+  .contact-person h3 { font-size: 11px; }
   .field-wide { grid-column: 1; }
   .form-actions { flex-wrap: wrap; justify-content: stretch; gap: 7px; padding: 9px 12px; }
   .form-actions .button { flex: 1 1 40%; min-width: 0; padding: 0 9px; font-size: 11px; }
@@ -346,3 +358,15 @@ textarea.form-control { min-height: 78px; resize: vertical; }
 .dossier-row-actions form { margin:0; }
 .button-danger { border:1px solid #b42318; color:#b42318; background:#fff; cursor:pointer; }
 .button-danger:hover { color:#fff; background:#b42318; }
+.consent-tools { display:flex; align-items:center; flex-wrap:wrap; gap:10px 14px; margin:0 0 14px; }
+.consent-tools > span { color:#52666b; font-size:.9rem; }
+.access-request-list { display:grid; gap:14px; }
+.access-request-card { display:flex; justify-content:space-between; align-items:flex-start; gap:24px; padding:22px; border:1px solid var(--line); background:#fff; }
+.access-request-identity h2 { margin:12px 0 6px; font-size:1.15rem; }
+.access-request-identity p { margin:0 0 8px; }
+.access-request-identity small { color:var(--muted); }
+.access-request-actions { display:flex; align-items:flex-end; gap:10px; flex-wrap:wrap; }
+.access-request-actions form { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.access-request-actions label { font-size:.85rem; }
+.access-request-actions select { min-height:38px; padding:5px 8px; border:1px solid var(--line); background:#fff; }
+@media(max-width:760px) { .access-request-card { flex-direction:column; } .access-request-actions { align-items:stretch; } }

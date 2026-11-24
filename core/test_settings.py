@@ -8,3 +8,7 @@ DATABASES = {
         "NAME": ":memory:",
     }
 }
+
+# Unit tests use Django's local test identities; AD integration is tested separately.
+AUTH_MODE = "LOCAL"
+AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]

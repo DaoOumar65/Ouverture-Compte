@@ -6,10 +6,14 @@
   <div>
     <div class="eyebrow"><span class="eyebrow-line"></span> ADMINISTRATION</div>
     <h1>Gestionnaires de compte</h1>
-    <p class="page-intro">Créez et gérez les comptes des chargés d'affaires par agence.</p>
+    <p class="page-intro">{% if ad_mode %}Validez les demandes AD et g&eacute;rez les rattachements aux agences.{% else %}Cr&eacute;ez et g&eacute;rez les comptes des charg&eacute;s d'affaires par agence.{% endif %}</p>
   </div>
   <div class="detail-actions">
+    {% if ad_mode %}
+      <a class="button button-primary" href="{% url 'recueil:demandes-acces' %}">Demandes d'acc&egrave;s{% if demandes_acces_en_attente %} ({{ demandes_acces_en_attente }}){% endif %}</a>
+    {% else %}
     <a class="button button-primary" href="{% url 'recueil:gestionnaire-creer' %}"><span class="button-plus">＋</span> Nouveau gestionnaire</a>
+    {% endif %}
   </div>
 </section>
 
@@ -66,8 +70,12 @@
 <div class="empty-state" style="background:#fff; border:1px solid var(--line); padding:50px 20px;">
   <span class="empty-mark">👤</span>
   <h2>Aucun gestionnaire</h2>
-  <p>Créez le premier compte gestionnaire pour qu'il puisse commencer à saisir des dossiers.</p>
+  <p>{% if ad_mode %}Les nouveaux collaborateurs appara&icirc;tront ici apr&egrave;s approbation de leur demande AD.{% else %}Cr&eacute;ez le premier compte gestionnaire pour qu'il puisse commencer &agrave; saisir des dossiers.{% endif %}</p>
+  {% if ad_mode %}
+    <a class="button button-primary" href="{% url 'recueil:demandes-acces' %}">Consulter les demandes d'acc&egrave;s ({{ demandes_acces_en_attente }})</a>
+  {% else %}
   <a class="button button-primary" href="{% url 'recueil:gestionnaire-creer' %}">Créer un gestionnaire</a>
+  {% endif %}
 </div>
 {% endif %}
 

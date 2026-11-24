@@ -11,6 +11,8 @@ urlpatterns = [
     path("journal/", views.journal_audit, name="journal-audit"),
     # Gestion des gestionnaires (Admin uniquement)
     path("utilisateurs/", views.gestion_utilisateurs, name="gestion-utilisateurs"),
+    path("utilisateurs/demandes-acces/", views.demandes_acces, name="demandes-acces"),
+    path("utilisateurs/demandes-acces/<int:pk>/traiter/", views.traiter_demande_acces, name="traiter-demande-acces"),
     path("utilisateurs/nouveau/", views.gestionnaire_creer, name="gestionnaire-creer"),
     path("utilisateurs/<int:pk>/modifier/", views.gestionnaire_modifier, name="gestionnaire-modifier"),
     # Dossiers

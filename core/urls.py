@@ -17,10 +17,11 @@ Including another URLconf
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
 from recueil.admin import admin_site
+from recueil.auth_views import BCBLoginView
 
 urlpatterns = [
     path('admin/', admin_site.urls),
-    path("accounts/login/", auth_views.LoginView.as_view(template_name="registration/login.html", redirect_authenticated_user=True, next_page="recueil:dossier-list"), name="login"),
+    path("accounts/login/", BCBLoginView.as_view(), name="login"),
     path("accounts/logout/", auth_views.LogoutView.as_view(next_page="login"), name="logout"),
     path("", include("recueil.urls")),
 ]

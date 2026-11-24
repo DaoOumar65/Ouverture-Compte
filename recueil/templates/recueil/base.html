@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>{% block title %}BCB · Ouverture de compte{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'recueil/app.css' %}">
+  <link rel="stylesheet" href="{% static 'recueil/app.css' %}?v=4">
   {% block extra_head %}{% endblock %}
 </head>
 <body>
@@ -26,7 +26,7 @@
     {# Libellé espace agence (centre) #}
     <div class="topbar-workspace">
       <span class="workspace-dot"></span>
-      {% if user.is_staff %}Administration{% else %}Ouverture de compte{% endif %}
+      {% if user.is_staff or is_admin_role %}Administration{% else %}Ouverture de compte{% endif %}
       <span class="topbar-divider">/</span>
       BCB
     </div>
@@ -55,8 +55,8 @@
 
   </header>
 
-  <div class="app-frame{% if user.is_staff %} app-frame-admin{% endif %}">
-    {% if user.is_staff %}
+  <div class="app-frame{% if user.is_staff or is_admin_role %} app-frame-admin{% endif %}">
+    {% if user.is_staff or is_admin_role %}
     <aside class="admin-sidebar">
       <div class="admin-sidebar-heading">
         <span class="admin-mark">B</span>
@@ -69,6 +69,9 @@
         </a>
         <a class="admin-nav-link{% if 'gestionnaire-' in request.resolver_match.url_name or request.resolver_match.url_name == 'gestion-utilisateurs' %} is-active{% endif %}" href="{% url 'recueil:gestion-utilisateurs' %}"{% if 'gestionnaire-' in request.resolver_match.url_name or request.resolver_match.url_name == 'gestion-utilisateurs' %} aria-current="page"{% endif %}>
           <span class="admin-menu-icon" aria-hidden="true">♙</span><span>Gestionnaires</span>
+        </a>
+        <a class="admin-nav-link{% if request.resolver_match.url_name == 'demandes-acces' %} is-active{% endif %}" href="{% url 'recueil:demandes-acces' %}"{% if request.resolver_match.url_name == 'demandes-acces' %} aria-current="page"{% endif %}>
+          <span class="admin-menu-icon" aria-hidden="true">!</span><span>Demandes d'acc&egrave;s{% if demandes_acces_ad_en_attente %} ({{ demandes_acces_ad_en_attente }}){% endif %}</span>
         </a>
         <a class="admin-nav-link{% if request.resolver_match.url_name == 'journal-audit' %} is-active{% endif %}" href="{% url 'recueil:journal-audit' %}"{% if request.resolver_match.url_name == 'journal-audit' %} aria-current="page"{% endif %}>
           <span class="admin-menu-icon" aria-hidden="true">◷</span><span>Journal d’audit</span>

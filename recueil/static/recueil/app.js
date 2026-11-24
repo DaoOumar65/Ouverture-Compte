@@ -11,6 +11,19 @@
 // DONNÉES DE RÉFÉRENCE
 // ============================================================
 
+// Afficher/masquer les mots de passe au besoin, sans changer leur valeur.
+document.querySelectorAll("[data-password-toggle]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const input = button.parentElement?.querySelector('input[type="password"], input[type="text"]');
+    if (!input) return;
+    const visible = input.type === "password";
+    input.type = visible ? "text" : "password";
+    button.textContent = visible ? "Masquer" : "Afficher";
+    button.setAttribute("aria-pressed", String(visible));
+    button.setAttribute("aria-label", visible ? "Masquer le mot de passe" : "Afficher le mot de passe");
+  });
+});
+
 const PAYS_AFRIQUE = [
   "Burkina Faso","Côte d'Ivoire","Mali","Niger","Sénégal","Ghana","Togo","Bénin",
   "Guinée","Sierra Leone","Liberia","Gambie","Mauritanie","Cap-Vert",
@@ -159,6 +172,31 @@ function attachDatalist(fieldName, options) {
   watch("type_compte", syncTypeCompte);
   syncTypeCompte();
 
+  // KYC personne morale : coordonnées du contact à l'étranger uniquement pour la diaspora.
+  const CHAMPS_CONTACT_DIASPORA = [
+    "contact_diaspora_pays", "contact_diaspora_nom", "contact_diaspora_adresse",
+    "contact_diaspora_domicile", "contact_diaspora_telephone_fixe",
+    "contact_diaspora_telephone_mobile",
+  ];
+  function syncContactDiaspora() {
+    setGroupVisible(CHAMPS_CONTACT_DIASPORA, getBoolValue("resident_bf") === false);
+  }
+  watch("resident_bf", syncContactDiaspora);
+  syncContactDiaspora();
+
+  const consentCheckAll = form.querySelector("[data-consent-check-all]");
+  consentCheckAll?.addEventListener("click", () => {
+    ["f2_transmission_credit", "f2_partage_credit", "f2_exclusion_depots",
+      "f2_limite_anciennete", "f2_duree_conservation", "f2_droit_acces",
+      "f2_droit_rapport"].forEach((name) => {
+      const yes = form.querySelector(`[data-field-name="${name}"][value="True"]`);
+      if (yes && !yes.checked) {
+        yes.checked = true;
+        yes.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+  });
+
   // ============================================================
   // SITUATION MATRIMONIALE → champs conjoint
   // ============================================================
@@ -244,6 +282,18 @@ function attachDatalist(fieldName, options) {
   }
   watch("categorie_client", syncCategorie);
   syncCategorie();
+
+  // Autres revenus : n'afficher les montants que si le client en déclare.
+  const AUTRES_REVENUS = [
+    "revenus_immobiliers", "revenus_mobiliers", "recettes_commerciales",
+    "indemnites", "autres_revenus",
+  ];
+  function syncAutresRevenus() {
+    const hasOtherIncome = getBoolValue("revenus_ailleurs") === true;
+    setGroupVisible(AUTRES_REVENUS, hasOtherIncome);
+  }
+  watch("revenus_ailleurs", syncAutresRevenus);
+  syncAutresRevenus();
 
   // ============================================================
   // MANDAT D'ADMINISTRATEUR / ACTIONNAIRE / PROCURATION

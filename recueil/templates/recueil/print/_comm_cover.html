@@ -1,18 +1,23 @@
 {# Page de garde commerciale : correspond \u00e0 la premi\u00e8re page du formulaire officiel. #}
 <section class="page comm-cover comm-cover-intro">
-  <div class="bank-heading">
-    <strong>BANQUE COMMERCIALE DU BURKINA</strong>
-    <span>B.C.B</span>
+  <div class="comm-cover-intro__brand">
+    {% include "recueil/print/_logo.html" %}
+    <div class="bank-heading">
+      <strong>BANQUE COMMERCIALE DU BURKINA</strong>
+      <span>B.C.B</span>
+    </div>
   </div>
   <div class="application-title">
     <h1>DEMANDE D'OUVERTURE DE COMPTE</h1>
-    <div class="cadre-num"></div>
+    <div class="cadre-num" aria-hidden="true"></div>
   </div>
-  <div class="company-box">
-    <div><strong>RAISON SOCIALE</strong><span>{{ dossier.pm_raison_sociale }}</span></div>
-    <div><strong>SI\u00c8GE SOCIAL</strong><span>{{ dossier.pm_siege_social }}</span></div>
-    <div><strong>N\u00b0</strong><span></span><strong>RUE</strong><span>{{ dossier.pm_secteur_rue }}</span><strong>SECTEUR</strong><span></span></div>
-  </div>
+  <table class="company-box" aria-label="Identification de l'entreprise">
+    <tbody>
+      <tr><th>RAISON SOCIALE</th><td>{{ dossier.pm_raison_sociale|default:" " }}</td></tr>
+      <tr><th>SIÈGE SOCIAL</th><td>{{ dossier.pm_siege_social|default:" " }}</td></tr>
+      <tr><th>RUE / SECTEUR</th><td>{{ dossier.pm_secteur_rue|default:" " }}</td></tr>
+    </tbody>
+  </table>
 </section>
 
 {# Couverture commerciale — Demande d'ouverture de compte (page de garde) #}

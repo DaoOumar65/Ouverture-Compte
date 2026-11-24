@@ -145,7 +145,7 @@
         <div class="row"><span class="lbl">Recettes activités commerciales :</span><span class="val">{% if dossier.recettes_commerciales is not None %}{{ dossier.recettes_commerciales|floatformat:0 }} FCFA{% endif %}</span></div>
         <div class="row"><span class="lbl">Indemnités :</span><span class="val">{% if dossier.indemnites is not None %}{{ dossier.indemnites|floatformat:0 }} FCFA{% endif %}</span></div>
         <div class="row"><span class="lbl">Autres :</span><span class="val">{% if dossier.autres_revenus is not None %}{{ dossier.autres_revenus|floatformat:0 }} FCFA{% endif %}</span></div>
-        <div class="row"><span class="lbl">Montant et nature des versements à l'ouverture du compte :</span><span class="val">{% if dossier.montant_versement_initial is not None %}{{ dossier.montant_versement_initial|floatformat:0 }} FCFA{% endif %} {{ dossier.nature_versement_initial }}</span></div>
+        <div class="versement-ouverture"><div class="lbl">Montant et nature des versements &agrave; l'ouverture du compte :</div><div class="val">{% if montant_versement_initial_affiche %}{{ montant_versement_initial_affiche }} FCFA{% endif %}{% if dossier.nature_versement_initial %} &mdash; {{ dossier.nature_versement_initial }}{% endif %}</div></div>
         <div class="row"><span class="val"></span></div>
         <div class="row"><span class="lbl">Types d'opérations et volumes habituels :</span><span class="val">{{ dossier.operations_habituelles }}</span></div>
         <div class="row"><span class="val"></span></div>

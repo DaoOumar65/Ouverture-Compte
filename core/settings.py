@@ -6,6 +6,14 @@ from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Load a local .env when python-dotenv is installed; production should inject secrets.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(BASE_DIR / ".env")
+except ImportError:
+    pass
+
 DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in {"1", "true", "yes"}
 if not DEBUG and not os.environ.get("DJANGO_ALLOWED_HOSTS"):
     raise ImproperlyConfigured(
@@ -45,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "recueil.middleware.ActiveDirectorySessionMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
@@ -62,6 +71,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "recueil.context_processors.access_approval_notifications",
             ],
         },
     },
@@ -120,3 +130,39 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# AD is the only authentication provider by default. LOCAL must be selected
+# explicitly for isolated development environments.
+AUTH_MODE = os.environ.get("AUTH_MODE", "AD").strip().upper()
+if AUTH_MODE not in {"AD", "LOCAL"}:
+    raise ImproperlyConfigured("AUTH_MODE must be AD or LOCAL.")
+if AUTH_MODE == "LOCAL" and not DEBUG:
+    raise ImproperlyConfigured("Local authentication is only allowed while DJANGO_DEBUG is enabled.")
+
+AD_MODE = os.environ.get("AD_MODE", "ldap").strip().lower()
+if AUTH_MODE == "AD" and AD_MODE != "ldap":
+    raise ImproperlyConfigured("Only AD_MODE=ldap is supported by this Django backend.")
+
+AD_HOST = os.environ.get("AD_HOST", "192.168.10.15").strip()
+AD_TLS = os.environ.get("AD_TLS", "ldaps").strip().lower()
+if AD_TLS in {"aucun", "none"}:
+    AD_TLS = "none"
+if AUTH_MODE == "AD" and AD_TLS not in {"ldaps", "starttls", "none"}:
+    raise ImproperlyConfigured("AD_TLS must be ldaps, starttls, or aucun.")
+AD_PORT = int(os.environ.get("AD_PORT", "636" if AD_TLS == "ldaps" else "389"))
+AD_DOMAIN_NETBIOS = os.environ.get("AD_DOMAIN_NETBIOS", "BCB").strip()
+AD_UPN_SUFFIXES = tuple(
+    value.strip()
+    for value in os.environ.get("AD_UPN_SUFFIXES", "bcb.bf,bcb.lan").split(",")
+    if value.strip()
+)
+AD_BIND_DN = os.environ.get("AD_BIND_DN", "").strip()
+AD_BIND_PASSWORD = os.environ.get("AD_BIND_PASSWORD", "")
+AD_BASE_DN = os.environ.get("AD_BASE_DN", "DC=bcb,DC=lan").strip()
+AD_CA_CERT = os.environ.get("AD_CA_CERT", "").strip()
+AD_TIMEOUT_MS = int(os.environ.get("AD_TIMEOUT_MS", "5000"))
+
+if AUTH_MODE == "AD":
+    AUTHENTICATION_BACKENDS = ["recueil.auth_backends.ActiveDirectoryBackend"]
+else:
+    AUTHENTICATION_BACKENDS = ["django.contrib.auth.backends.ModelBackend"]
