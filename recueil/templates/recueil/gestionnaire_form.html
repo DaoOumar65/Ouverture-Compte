@@ -121,7 +121,7 @@
           <label for="id_new_password1">Nouveau mot de passe</label>
           <div class="password-input-wrap">
             <input type="password" name="new_password1" id="id_new_password1" class="form-control" autocomplete="new-password">
-            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
         </div>
@@ -129,7 +129,7 @@
           <label for="id_new_password2">Confirmer le mot de passe</label>
           <div class="password-input-wrap">
             <input type="password" name="new_password2" id="id_new_password2" class="form-control" autocomplete="new-password">
-            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
         </div>
@@ -175,7 +175,7 @@
           <label for="{{ password_form.new_password1.id_for_label }}">Mot de passe <span style="color:var(--red)">*</span></label>
           <div class="password-input-wrap">
             {{ password_form.new_password1 }}
-            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           {% if password_form.new_password1.errors %}<span class="field-error">{{ password_form.new_password1.errors|join:" " }}</span>{% endif %}
         </div>
@@ -183,7 +183,7 @@
           <label for="{{ password_form.new_password2.id_for_label }}">Confirmer <span style="color:var(--red)">*</span></label>
           <div class="password-input-wrap">
             {{ password_form.new_password2 }}
-            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false">Afficher</button>
+            <button type="button" class="password-toggle" data-password-toggle aria-pressed="false" aria-label="Afficher le mot de passe" title="Afficher le mot de passe"><svg class="password-eye" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg></button>
           </div>
           {% if password_form.new_password2.errors %}<span class="field-error">{{ password_form.new_password2.errors|join:" " }}</span>{% endif %}
         </div>

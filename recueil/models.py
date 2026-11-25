@@ -5,6 +5,11 @@ from django.db import models
 from django.conf import settings
 
 
+def normaliser_numero_piece(value):
+    """Normalise un identifiant pour rechercher les doublons malgré espaces/tirets."""
+    return "".join(character for character in (value or "") if character.isalnum()).upper()
+
+
 class Agence(models.Model):
     """Agence BCB avec son numéro officiel."""
     nom = models.CharField("Nom de l'agence", max_length=150)
@@ -87,7 +92,21 @@ class DossierClient(models.Model):
         related_name="dossiers_crees",
         verbose_name="Gestionnaire créateur",
     )
+    initiateur_snapshot = models.CharField(
+        "Gestionnaire ayant initié le brouillon", max_length=150, blank=True, default="",
+    )
+    termine_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="dossiers_termines",
+        verbose_name="Gestionnaire ayant terminé le dossier",
+    )
     agence_snapshot = models.CharField("Agence à la création", max_length=120, blank=True)
+    agence_numero_snapshot = models.CharField(
+        "Code agence à la création", max_length=20, blank=True, default="", db_index=True,
+    )
     charge_affaires_snapshot = models.CharField(
         "Chargé d'affaires à la création", max_length=150, blank=True,
     )
@@ -153,6 +172,10 @@ class DossierClient(models.Model):
     )
     # Clé de recherche du client : indexée.
     numero_piece = models.CharField("Numéro de pièce", max_length=60, db_index=True)
+    numero_piece_normalise = models.CharField(
+        "Numéro de pièce normalisé", max_length=60, blank=True, default="",
+        editable=False, db_index=True,
+    )
     piece_delivree_le = models.DateField("Délivrée le", null=True, blank=True)
     piece_delivree_a = models.CharField("Lieu de délivrance", max_length=100, blank=True)
     piece_expire_le = models.DateField("Date d'expiration", null=True, blank=True)
@@ -476,6 +499,30 @@ class DossierClient(models.Model):
         if self.type_compte == self.TypeCompte.COMMERCIAL and self.pm_raison_sociale:
             return f"{self.pm_raison_sociale} ({self.reference})"
         return f"{self.nom} {self.prenoms} ({self.reference})"
+
+    def save(self, *args, **kwargs):
+        self.numero_piece_normalise = normaliser_numero_piece(self.numero_piece)
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            kwargs["update_fields"] = set(update_fields) | {"numero_piece_normalise"}
+        super().save(*args, **kwargs)
+
+
+class DossierIdentiteVerrou(models.Model):
+    """Réserve une pièce par type de compte lorsqu'un dossier est créé."""
+    type_compte = models.CharField(max_length=20, choices=DossierClient.TypeCompte.choices)
+    numero_piece_normalise = models.CharField(max_length=60)
+    dossier = models.OneToOneField(
+        DossierClient, on_delete=models.CASCADE, related_name="verrou_identite",
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=("type_compte", "numero_piece_normalise"),
+                name="uniq_created_type_piece_identity",
+            ),
+        ]
 
 
 class UserProfile(models.Model):

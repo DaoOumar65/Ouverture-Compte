@@ -6,10 +6,10 @@ from django.contrib.auth.models import Group
 from django.conf import settings
 from django.core.serializers.json import DjangoJSONEncoder
 from django.core.paginator import Paginator
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.forms.models import model_to_dict
-from django.http import HttpResponse, JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.cache import never_cache
@@ -23,15 +23,28 @@ from .forms import (
     GestionnaireUserForm,
     UserProfileForm,
     build_dossier_reference,
-    new_dossier_reference,
 )
-from .models import ADAccessRequest, Agence, DossierAuditEvent, DossierClient, UserProfile
+from .models import (
+    ADAccessRequest,
+    Agence,
+    DossierAuditEvent,
+    DossierClient,
+    DossierIdentiteVerrou,
+    UserProfile,
+    normaliser_numero_piece,
+)
 from .permissions import (
     ADMIN_GROUP,
     admin_required,
     has_role,
     manager_or_admin_required,
     manager_required,
+)
+from .amplitude import (
+    AmplitudeAmbiguousClient,
+    AmplitudeConnectionError,
+    AmplitudeNotConfigured,
+    rechercher_client_par_compte,
 )
 
 
@@ -368,31 +381,102 @@ def _journaliser(action, utilisateur, dossier=None, details=None):
     )
 
 
+def _agence_numero_gestionnaire(user):
+    return UserProfile.objects.filter(user=user).values_list(
+        "agence__numero", flat=True
+    ).first() or ""
+
+
+def _nom_gestionnaire(profil, user):
+    return profil.nom_affiche or user.get_full_name() or user.get_username()
+
+
 def _instantane_gestionnaire(request, dossier):
     profil, _ = UserProfile.objects.get_or_create(user=request.user)
+    nom_gestionnaire = _nom_gestionnaire(profil, request.user)
     dossier.cree_par = request.user
+    dossier.initiateur_snapshot = nom_gestionnaire
     dossier.agence_snapshot = profil.agence.nom if profil.agence else ""
-    dossier.charge_affaires_snapshot = (
-        profil.nom_affiche
-        or request.user.get_full_name()
-        or request.user.get_username()
-    )
+    dossier.agence_numero_snapshot = profil.agence.numero if profil.agence else ""
+    dossier.charge_affaires_snapshot = nom_gestionnaire
+
+
+def _attribuer_gestionnaire_finalisateur(request, dossier):
+    profil, _ = UserProfile.objects.get_or_create(user=request.user)
+    dossier.termine_par = request.user
+    dossier.charge_affaires_snapshot = _nom_gestionnaire(profil, request.user)
 
 
 def _dossier_accessible(request, pk):
     # Les désactivés (supprimés logiquement) ne sont jamais accessibles
-    dossiers = DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
-    if not has_role(request.user, ADMIN_GROUP):
-        dossiers = dossiers.filter(cree_par=request.user)
+    dossiers = DossierClient.objects.exclude(
+        statut=DossierClient.Statut.DESACTIVE
+    ).select_related("cree_par", "termine_par")
+    if has_role(request.user, ADMIN_GROUP):
+        return get_object_or_404(dossiers, pk=pk)
+    dossiers_crees = (DossierClient.Statut.CREE, DossierClient.Statut.GENERE)
+    acces_dossier_cree = Q(cree_par=request.user, statut__in=dossiers_crees) | Q(
+        termine_par=request.user, statut__in=dossiers_crees
+    )
+    agence_numero = _agence_numero_gestionnaire(request.user)
+    if agence_numero:
+        acces_brouillon_agence = Q(
+            statut=DossierClient.Statut.BROUILLON,
+            agence_numero_snapshot=agence_numero,
+        )
+        dossiers = dossiers.filter(acces_dossier_cree | acces_brouillon_agence)
+    else:
+        dossiers = dossiers.filter(acces_dossier_cree)
     return get_object_or_404(dossiers, pk=pk)
 
 
 def _reference_officielle(request, dossier):
-    profil = getattr(request.user, "profile", None)
-    agence_numero = profil.agence.numero if (profil and profil.agence) else "0000"
+    agence_numero = dossier.agence_numero_snapshot or "0000"
     return build_dossier_reference(
         agence_numero, dossier.numero_piece, dossier_id=dossier.pk
     )
+
+
+class IdentiteDossierDejaEnregistree(Exception):
+    """Raised when another finalized dossier owns the same identity/type key."""
+
+
+@transaction.atomic
+def _reserver_identite_dossier(dossier):
+    numero_normalise = normaliser_numero_piece(dossier.numero_piece)
+    if not numero_normalise:
+        raise IdentiteDossierDejaEnregistree
+
+    identite = {
+        "type_compte": dossier.type_compte,
+        "numero_piece_normalise": numero_normalise,
+    }
+    verrou_actuel = DossierIdentiteVerrou.objects.select_for_update().filter(
+        dossier=dossier
+    ).first()
+    verrou_existant = DossierIdentiteVerrou.objects.select_for_update().filter(
+        **identite
+    ).first()
+    if verrou_existant and verrou_existant.dossier_id != dossier.pk:
+        raise IdentiteDossierDejaEnregistree
+    if verrou_actuel and all(
+        getattr(verrou_actuel, field) == value for field, value in identite.items()
+    ):
+        dossier.numero_piece_normalise = numero_normalise
+        return
+
+    if verrou_actuel:
+        verrou_actuel.delete()
+    try:
+        with transaction.atomic():
+            DossierIdentiteVerrou.objects.create(
+                dossier=dossier,
+                numero_piece_normalise=numero_normalise,
+                type_compte=dossier.type_compte,
+            )
+    except IntegrityError as exc:
+        raise IdentiteDossierDejaEnregistree from exc
+    dossier.numero_piece_normalise = numero_normalise
 
 
 def _enregistrer(request, form, action, nouveau):
@@ -403,13 +487,19 @@ def _enregistrer(request, form, action, nouveau):
     valeurs_initiales = dict(form.initial)
     dossier = form.save(commit=False)
 
+    if not nouveau and dossier.statut in (
+        DossierClient.Statut.CREE,
+        DossierClient.Statut.GENERE,
+    ):
+        _reserver_identite_dossier(dossier)
+
     if nouveau:
-        # Référence : brouillon d'abord avec UUID, puis on la met à jour à la validation
-        dossier.reference = new_dossier_reference()
         _instantane_gestionnaire(request, dossier)
+        dossier.reference = _reference_officielle(request, dossier)
 
     if action == "generate":
         dossier.statut = DossierClient.Statut.CREE
+        _attribuer_gestionnaire_finalisateur(request, dossier)
     elif nouveau:
         dossier.statut = DossierClient.Statut.BROUILLON
 
@@ -444,9 +534,20 @@ def dossier_list(request):
     query = request.GET.get("q", "").strip()
     status = request.GET.get("statut", "").strip()
     # Exclure les désactivés (supprimés logiquement) de la liste
-    dossiers = DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
-    if not has_role(request.user, ADMIN_GROUP):
-        dossiers = dossiers.filter(cree_par=request.user)
+    dossiers = DossierClient.objects.exclude(
+        statut=DossierClient.Statut.DESACTIVE
+    ).select_related("cree_par", "termine_par")
+    is_admin = has_role(request.user, ADMIN_GROUP)
+    agence_numero = ""
+    if not is_admin:
+        agence_numero = _agence_numero_gestionnaire(request.user)
+        visibles = Q(statut__in=(DossierClient.Statut.CREE, DossierClient.Statut.GENERE))
+        if agence_numero:
+            visibles |= Q(
+                statut=DossierClient.Statut.BROUILLON,
+                agence_numero_snapshot=agence_numero,
+            )
+        dossiers = dossiers.filter(visibles)
     if query:
         dossiers = dossiers.filter(
             Q(reference__icontains=query)
@@ -464,12 +565,31 @@ def dossier_list(request):
     if status in [s[0] for s in statuts_visibles]:
         dossiers = dossiers.filter(statut=status)
     page_obj = Paginator(dossiers, 20).get_page(request.GET.get("page"))
+    for dossier in page_obj:
+        dossier.is_owner = dossier.cree_par_id == request.user.pk
+        dossier.is_finalizer = dossier.termine_par_id == request.user.pk
+        dossier.initiateur_affichage = dossier.initiateur_snapshot or (
+            dossier.cree_par.get_full_name() or dossier.cree_par.get_username()
+            if dossier.cree_par_id else "Gestionnaire inconnu"
+        )
+        dossier.is_global_notice = (
+            not is_admin
+            and not dossier.is_owner
+            and not dossier.is_finalizer
+            and dossier.statut in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE)
+        )
+        dossier.is_shared_draft = (
+            not dossier.is_owner
+            and dossier.statut == DossierClient.Statut.BROUILLON
+            and bool(agence_numero)
+            and dossier.agence_numero_snapshot == agence_numero
+        )
     return render(request, "recueil/dossier_list.html", {
         "page_obj": page_obj,
         "query": query,
         "status": status,
         "status_choices": statuts_visibles,
-        "is_admin": has_role(request.user, ADMIN_GROUP),
+        "is_admin": is_admin,
     })
 
 
@@ -513,10 +633,13 @@ def dossier_create(request):
             messages.error(request, "Session expirée. Veuillez resaisir et générer à nouveau.")
             return redirect("recueil:dossier-create")
         try:
-            dossier = DossierClient.objects.get(pk=pk, cree_par=request.user, statut=DossierClient.Statut.BROUILLON)
-        except DossierClient.DoesNotExist:
+            dossier = _dossier_accessible(request, pk)
+        except Http404:
             messages.error(request, "Dossier introuvable.")
             return redirect("recueil:dossier-create")
+        if dossier.statut != DossierClient.Statut.BROUILLON:
+            messages.error(request, "Ce brouillon n'est plus disponible pour confirmation.")
+            return redirect("recueil:dossier-list")
         # Revalider la version en base pour bloquer les confirmations directes.
         form = _dossier_form_class(dossier.type_compte)(
             data=model_to_dict(dossier), instance=dossier, generate=True
@@ -529,9 +652,20 @@ def dossier_create(request):
             return render(
                 request, "recueil/dossier_form.html", _form_context(form, dossier)
             )
+        try:
+            _reserver_identite_dossier(dossier)
+        except IdentiteDossierDejaEnregistree:
+            form.add_error(
+                "numero_piece",
+                "Un dossier de ce type vient d'être créé dans une autre agence. Vérifiez la liste synchronisée.",
+            )
+            return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
         dossier.reference = _reference_officielle(request, dossier)
         dossier.statut = DossierClient.Statut.CREE
-        dossier.save(update_fields=["reference", "statut"])
+        _attribuer_gestionnaire_finalisateur(request, dossier)
+        dossier.save(update_fields=[
+            "reference", "statut", "termine_par", "charge_affaires_snapshot",
+        ])
         _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
         messages.success(request, "Dossier créé et formulaires prêts pour impression.")
         return redirect("recueil:dossier-print", pk=dossier.pk)
@@ -550,6 +684,12 @@ def dossier_create(request):
         generate=action in {"generate", "preview"},
     )
     if request.method == "POST" and form.is_valid():
+        if not _agence_numero_gestionnaire(request.user):
+            form.add_error(
+                None,
+                "Votre profil gestionnaire n'est pas rattaché à une agence. Contactez l'administrateur avant de créer un dossier.",
+            )
+            return render(request, "recueil/dossier_form.html", _form_context(form))
         if action in {"generate", "preview"}:
             # Sauvegarder en brouillon AVANT la prévisualisation → données jamais perdues
             dossier = _enregistrer(request, form, "draft", nouveau=True)
@@ -567,7 +707,7 @@ def dossier_create(request):
 @manager_required
 @transaction.atomic
 def dossier_edit(request, pk):
-    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    dossier = _dossier_accessible(request, pk)
     if dossier.supprime_le:
         messages.error(request, "Ce dossier a été supprimé.")
         return redirect("recueil:dossier-list")
@@ -594,10 +734,21 @@ def dossier_edit(request, pk):
             return render(
                 request, "recueil/dossier_form.html", _form_context(form, dossier)
             )
+        try:
+            _reserver_identite_dossier(dossier)
+        except IdentiteDossierDejaEnregistree:
+            form.add_error(
+                "numero_piece",
+                "Un dossier de ce type vient d'être créé dans une autre agence. Vérifiez la liste synchronisée.",
+            )
+            return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
         if dossier.statut == DossierClient.Statut.BROUILLON:
             dossier.reference = _reference_officielle(request, dossier)
             dossier.statut = DossierClient.Statut.CREE
-            dossier.save(update_fields=["reference", "statut"])
+            _attribuer_gestionnaire_finalisateur(request, dossier)
+            dossier.save(update_fields=[
+                "reference", "statut", "termine_par", "charge_affaires_snapshot",
+            ])
         _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
         messages.success(request, "Dossier créé et formulaires prêts pour impression.")
         return redirect("recueil:dossier-print", pk=dossier.pk)
@@ -613,7 +764,14 @@ def dossier_edit(request, pk):
             dossier = _enregistrer(request, form, "draft", nouveau=False)
             contexte = _contexte_preview(dossier, request, pk=pk)
             return render(request, "recueil/dossier_preview.html", contexte)
-        dossier = _enregistrer(request, form, "draft", nouveau=False)
+        try:
+            dossier = _enregistrer(request, form, "draft", nouveau=False)
+        except IdentiteDossierDejaEnregistree:
+            form.add_error(
+                "numero_piece",
+                "Un dossier de ce type existe déjà dans le réseau BCB.",
+            )
+            return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
         messages.success(request, "Dossier mis à jour.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
     return render(request, "recueil/dossier_form.html", _form_context(form, dossier))
@@ -630,49 +788,57 @@ def dossier_reprendre(request, pk):
     Les déclarations (FATCA, PPE, secret bancaire) ne sont pas recopiées.
     """
     source = get_object_or_404(DossierClient, pk=pk)
-    est_proprietaire = source.cree_par_id == request.user.pk
     acces_recherche = str(source.pk) in request.session.get(
         "client_search_allowed_ids", []
     )
-    if not est_proprietaire and not acces_recherche:
+    est_proprietaire = source.cree_par_id == request.user.pk
+    if not acces_recherche and not (
+        est_proprietaire and source.statut == DossierClient.Statut.BROUILLON
+    ):
         return HttpResponse(status=404)
+    if not _agence_numero_gestionnaire(request.user):
+        messages.error(request, "Votre profil gestionnaire n'est pas rattaché à une agence.")
+        return redirect("recueil:recherche-client")
 
-    nouveau = _copier_dossier(request, source)
-    messages.success(
-        request,
-        "Nouveau brouillon créé à partir du dossier précédent. "
-        "Vérifiez les informations (téléphone, adresse, emploi, validité de la pièce) "
-        "et posez à nouveau les déclarations.",
-    )
-    return redirect("recueil:dossier-edit", pk=nouveau.pk)
+    if source.statut == DossierClient.Statut.BROUILLON:
+        if not _dossier_accessible(request, source.pk):
+            return HttpResponse(status=404)
+        return redirect("recueil:dossier-edit", pk=source.pk)
 
+    type_cible = request.POST.get("type_compte", "").strip()
+    if type_cible not in DossierClient.TypeCompte.values:
+        return HttpResponse(status=400)
+    if type_cible == source.type_compte:
+        messages.error(request, "Un dossier de ce type existe déjà pour cette pièce dans le réseau BCB.")
+        return redirect("recueil:recherche-client")
 
-def _copier_dossier(request, source):
-    donnees = {
-        field.name: getattr(source, field.name)
-        for field in DossierClient._meta.fields
-        if field.name not in CHAMPS_NON_COPIES
+    champs_a_ne_pas_copier = {
+        "type_compte", "reference", "statut", "pdf_fige", "cree_par",
+        "agence_snapshot", "agence_numero_snapshot", "initiateur_snapshot",
+        "termine_par", "charge_affaires_snapshot", "derniere_impression_le",
+        "derniere_impression_par", "signe_le", "signe_par", "est_us_person",
+        "est_ppe", "levee_secret_bancaire", "f2_transmission_credit",
+        "f2_partage_credit", "f2_exclusion_depots", "f2_limite_anciennete",
+        "f2_duree_conservation", "f2_droit_acces", "f2_droit_rapport",
     }
-    nouveau = DossierClient(
-        **donnees,
-        reference=new_dossier_reference(),
-        statut=DossierClient.Statut.BROUILLON,
-    )
-    _instantane_gestionnaire(request, nouveau)
-    nouveau.save()
-    _journaliser(
-        DossierAuditEvent.Action.CREATION,
-        request.user,
-        nouveau,
-        {"copie_de": source.reference},
-    )
+    cible = DossierClient(type_compte=type_cible, statut=DossierClient.Statut.BROUILLON)
+    champs_formulaire = _dossier_form_class(type_cible).base_fields
+    for champ in champs_formulaire:
+        if champ not in champs_a_ne_pas_copier and hasattr(source, champ):
+            setattr(cible, champ, getattr(source, champ))
+    _instantane_gestionnaire(request, cible)
+    cible.reference = _reference_officielle(request, cible)
+    cible.save()
     _journaliser(
         DossierAuditEvent.Action.REUTILISATION,
         request.user,
-        source,
-        {"nouveau_dossier": nouveau.reference},
+        cible,
+        {"dossier_source": str(source.pk), "agence_source": source.agence_snapshot},
     )
-    return nouveau
+    messages.success(request, "Un nouveau brouillon a été préparé à partir du dossier existant. Vérifiez les informations avant de le générer.")
+    return redirect("recueil:dossier-edit", pk=cible.pk)
+
+
 
 
 @never_cache
@@ -695,11 +861,31 @@ def dossier_detail(request, pk):
                 value = "Oui" if value else "Non"
             values.append((label, value if value not in (None, "") else "—"))
         sections.append({"title": title, "values": values})
+    agence_numero = _agence_numero_gestionnaire(request.user)
+    is_owner = dossier.cree_par_id == request.user.pk
+    is_finalizer = dossier.termine_par_id == request.user.pk
+    is_shared_draft = (
+        dossier.statut == DossierClient.Statut.BROUILLON
+        and bool(agence_numero)
+        and dossier.agence_numero_snapshot == agence_numero
+        and not is_owner
+    )
+    initiateur_affichage = dossier.initiateur_snapshot or (
+        dossier.cree_par.get_full_name() or dossier.cree_par.get_username()
+        if dossier.cree_par_id else "Gestionnaire inconnu"
+    )
     return render(request, "recueil/dossier_detail.html", {
         "dossier": dossier,
         "sections": sections,
         "is_admin": has_role(request.user, ADMIN_GROUP),
-        "is_owner": dossier.cree_par_id == request.user.pk,
+        "is_owner": is_owner,
+        "is_finalizer": is_finalizer,
+        "is_shared_draft": is_shared_draft,
+        "initiateur_affichage": initiateur_affichage,
+        "show_dossier_actions": (
+            not has_role(request.user, ADMIN_GROUP)
+            and (is_owner or is_finalizer or is_shared_draft)
+        ),
     })
 
 
@@ -830,7 +1016,9 @@ def _contexte_impression(dossier):
 @require_POST
 def dossier_supprimer(request, pk):
     """Suppression logique d'un brouillon — masqué dans l'interface, traçable en BD."""
-    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    dossier = _dossier_accessible(request, pk)
+    if dossier.cree_par_id != request.user.pk:
+        raise Http404
     if dossier.statut != DossierClient.Statut.BROUILLON:
         messages.error(request, "Seul un brouillon peut être supprimé.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
@@ -846,7 +1034,7 @@ def dossier_supprimer(request, pk):
 @never_cache
 @manager_required
 def dossier_print(request, pk):
-    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    dossier = _dossier_accessible(request, pk)
     en_generation = dossier.statut == DossierClient.Statut.BROUILLON
     if dossier.statut not in (
         DossierClient.Statut.BROUILLON,
@@ -913,18 +1101,26 @@ def dossier_print(request, pk):
 @transaction.atomic
 @require_POST
 def dossier_confirmer(request, pk):
-    dossier = get_object_or_404(
-        DossierClient, pk=pk, cree_par=request.user, statut=DossierClient.Statut.BROUILLON
-    )
+    dossier = _dossier_accessible(request, pk)
+    if dossier.statut != DossierClient.Statut.BROUILLON:
+        raise Http404
     form = _dossier_form_class(dossier.type_compte)(
         data=model_to_dict(dossier), instance=dossier, generate=True
     )
     if not form.is_valid():
         messages.error(request, "Complétez les champs signalés avant d'enregistrer le dossier.")
         return redirect("recueil:dossier-edit", pk=dossier.pk)
+    try:
+        _reserver_identite_dossier(dossier)
+    except IdentiteDossierDejaEnregistree:
+        messages.error(request, "Un dossier de ce type existe déjà dans le réseau BCB.")
+        return redirect("recueil:dossier-edit", pk=dossier.pk)
     dossier.reference = _reference_officielle(request, dossier)
     dossier.statut = DossierClient.Statut.CREE
-    dossier.save(update_fields=["reference", "statut"])
+    _attribuer_gestionnaire_finalisateur(request, dossier)
+    dossier.save(update_fields=[
+        "reference", "statut", "termine_par", "charge_affaires_snapshot",
+    ])
     _journaliser(DossierAuditEvent.Action.GENERATION, request.user, dossier)
     messages.success(request, "Dossier enregistré comme créé.")
     return redirect("recueil:dossier-print", pk=dossier.pk)
@@ -935,7 +1131,7 @@ def dossier_confirmer(request, pk):
 @transaction.atomic
 @require_POST
 def dossier_impression_marquer(request, pk):
-    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    dossier = _dossier_accessible(request, pk)
     if dossier.statut not in (
         DossierClient.Statut.BROUILLON,
         DossierClient.Statut.CREE,
@@ -955,7 +1151,7 @@ def dossier_impression_marquer(request, pk):
 @transaction.atomic
 @require_POST
 def dossier_signer(request, pk):
-    dossier = get_object_or_404(DossierClient, pk=pk, cree_par=request.user)
+    dossier = _dossier_accessible(request, pk)
     if dossier.statut not in (DossierClient.Statut.CREE, DossierClient.Statut.GENERE):
         messages.error(request, "Seul un dossier créé peut être marqué comme signé.")
         return redirect("recueil:dossier-detail", pk=dossier.pk)
@@ -970,15 +1166,76 @@ def dossier_signer(request, pk):
 
 @never_cache
 @manager_required
+@require_POST
+def recherche_client_amplitude(request):
+    """Find an existing Amplitude client from an account and agency."""
+    try:
+        payload = json.loads(request.body.decode("utf-8")) if request.content_type == "application/json" else request.POST
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return JsonResponse({"error": "Requête de recherche invalide."}, status=400)
+
+    numero_compte = str(payload.get("numero_compte", "")).strip()
+    agence = str(payload.get("agence", "")).strip()
+    try:
+        resultat = rechercher_client_par_compte(numero_compte, agence)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+    except AmplitudeNotConfigured:
+        return JsonResponse(
+            {"error": "La connexion à la base centrale n'est pas encore configurée. Complétez les paramètres AMPLITUDE sur le serveur."},
+            status=503,
+        )
+    except AmplitudeAmbiguousClient:
+        return JsonResponse(
+            {"error": "Ce compte correspond à plusieurs fiches client dans Amplitude. Vérifiez le compte et l'agence auprès de l'administration."},
+            status=409,
+        )
+    except AmplitudeConnectionError:
+        return JsonResponse(
+            {"error": "La base centrale est momentanément inaccessible. Vous pouvez poursuivre la saisie manuellement."},
+            status=502,
+        )
+
+    trouve = resultat is not None
+    _journaliser(
+        DossierAuditEvent.Action.RECHERCHE_CLIENT,
+        request.user,
+        details={
+            "source": "AMPLITUDE",
+            "correspondance": trouve,
+            "numero_compte": numero_compte,
+            "agence": agence,
+        },
+    )
+    if not trouve:
+        return JsonResponse({"found": False, "message": "Aucun client correspondant à ce compte et à cette agence. Vous pouvez remplir le formulaire manuellement."})
+    reponse = {"found": True, **resultat}
+    if "type_piece" in resultat["fields"] and not resultat["fields"]["type_piece"]:
+        reponse["message"] = (
+            "Client trouvé. Les informations disponibles ont été reprises ; "
+            "choisissez manuellement la nature de la pièce d'identité et vérifiez les autres champs."
+        )
+    return JsonResponse(reponse)
+
+
+@never_cache
+@manager_required
 def recherche_client(request):
     query = request.GET.get("q", "").strip()
     if not query:
         query = request.GET.get("numero_piece", "").strip()
     resultat = None
     if query:
+        agence_numero = _agence_numero_gestionnaire(request.user)
+        accessibles = Q(statut__in=(DossierClient.Statut.CREE, DossierClient.Statut.GENERE))
+        if agence_numero:
+            accessibles |= Q(
+                statut=DossierClient.Statut.BROUILLON,
+                agence_numero_snapshot=agence_numero,
+            )
         dossier = (
             DossierClient.objects.exclude(statut=DossierClient.Statut.DESACTIVE)
-            .filter(cree_par=request.user)
+            .filter(accessibles)
             .filter(
                 Q(numero_piece__iexact=query)
                 | Q(nom__icontains=query)
@@ -989,9 +1246,7 @@ def recherche_client(request):
             .order_by("-maj_le")
             .first()
         )
-        request.session["client_search_allowed_ids"] = (
-            [str(dossier.pk)] if dossier else []
-        )
+        request.session["client_search_allowed_ids"] = [str(dossier.pk)] if dossier else []
         _journaliser(
             DossierAuditEvent.Action.RECHERCHE_CLIENT,
             request.user,
@@ -999,14 +1254,26 @@ def recherche_client(request):
             {"correspondance": dossier is not None, "critere": query},
         )
         if dossier:
+            types_existants = set(
+                DossierIdentiteVerrou.objects.filter(
+                    numero_piece_normalise=normaliser_numero_piece(dossier.numero_piece)
+                ).values_list("type_compte", flat=True)
+            )
+            types_existants.add(dossier.type_compte)
             resultat = {
                 "pk": dossier.pk,
                 "nom_complet": f"{dossier.prenoms} {dossier.nom}".strip(),
                 "date_naissance": dossier.date_naissance,
                 "reference": dossier.reference,
                 "type_compte": dossier.get_type_compte_display(),
+                "statut": dossier.statut,
                 "agence": dossier.agence_snapshot,
                 "maj_le": dossier.maj_le,
+                "type_compte_code": dossier.type_compte,
+                "autres_types": [
+                    (code, label) for code, label in DossierClient.TypeCompte.choices
+                    if code not in types_existants
+                ],
             }
     return render(
         request,

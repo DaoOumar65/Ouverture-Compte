@@ -8,6 +8,7 @@ urlpatterns = [
     path("", views.dossier_list, name="dossier-list"),
     path("dossiers/nouveau/", views.dossier_create, name="dossier-create"),
     path("clients/rechercher/", views.recherche_client, name="recherche-client"),
+    path("clients/amplitude/rechercher/", views.recherche_client_amplitude, name="recherche-client-amplitude"),
     path("journal/", views.journal_audit, name="journal-audit"),
     # Gestion des gestionnaires (Admin uniquement)
     path("utilisateurs/", views.gestion_utilisateurs, name="gestion-utilisateurs"),

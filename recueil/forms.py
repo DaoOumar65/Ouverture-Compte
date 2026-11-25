@@ -4,7 +4,7 @@ from django import forms
 from django.conf import settings
 from django.utils import timezone
 
-from .models import DossierClient
+from .models import DossierClient, DossierIdentiteVerrou, normaliser_numero_piece
 
 
 # Widget RadioSelect qui propage data-field-name sur chaque <input> individuel
@@ -89,7 +89,8 @@ class DossierClientForm(forms.ModelForm):
         model = DossierClient
         exclude = (
             "id", "reference", "statut", "cree_le", "maj_le", "pdf_fige",
-            "cree_par", "agence_snapshot", "charge_affaires_snapshot",
+            "cree_par", "agence_snapshot", "agence_numero_snapshot",
+            "initiateur_snapshot", "termine_par", "charge_affaires_snapshot",
             "derniere_impression_le", "derniere_impression_par",
             "signe_le", "signe_par",
         )
@@ -189,6 +190,34 @@ class DossierClientForm(forms.ModelForm):
 
     def clean(self):
         cleaned = super().clean()
+        numero_piece = (cleaned.get("numero_piece") or "").strip()
+        if not numero_piece:
+            self.add_error(
+                "numero_piece",
+                "Renseignez le numéro de CNIB ou de passeport pour enregistrer le brouillon.",
+            )
+        else:
+            cleaned["numero_piece"] = numero_piece
+            numero_normalise = normaliser_numero_piece(numero_piece)
+            doublons = DossierClient.objects.filter(
+                type_compte=cleaned.get("type_compte"),
+                numero_piece_normalise=numero_normalise,
+                statut__in=(DossierClient.Statut.CREE, DossierClient.Statut.GENERE),
+            )
+            if self.instance.pk:
+                doublons = doublons.exclude(pk=self.instance.pk)
+            verrous = DossierIdentiteVerrou.objects.filter(
+                type_compte=cleaned.get("type_compte"),
+                numero_piece_normalise=numero_normalise,
+            )
+            if self.instance.pk:
+                verrous = verrous.exclude(dossier_id=self.instance.pk)
+            if numero_normalise and (doublons.exists() or verrous.exists()):
+                self.add_error(
+                    "numero_piece",
+                    "Un dossier de ce type existe déjà pour cette pièce dans le réseau BCB. Vérifiez le dossier existant avant toute nouvelle ouverture.",
+                )
+
         if self.generate:
             required_fields = list(IDENTITY_REQUIRED_FOR_GENERATION)
             if cleaned.get("type_compte") == DossierClient.TypeCompte.COMMERCIAL:

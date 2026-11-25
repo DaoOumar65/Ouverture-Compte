@@ -3,7 +3,7 @@
 {% block content %}
 <div class="detail-toolbar no-print">
   <a class="back-link" href="{% url 'recueil:dossier-list' %}">← Tous les dossiers</a>
-  {% if not is_admin and is_owner %}
+  {% if show_dossier_actions %}
   <div class="detail-actions">
     {% if not dossier.signe_le %}
       <a class="button button-primary" href="{% url 'recueil:dossier-edit' dossier.pk %}"><span aria-hidden="true">✎</span> Modifier le dossier</a>
@@ -16,19 +16,19 @@
         <form method="post" action="{% url 'recueil:dossier-signer' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Marquer comme signé</button></form>
       {% endif %}
     {% endif %}
-    {% if dossier.statut == "BROUILLON" %}
+    {% if dossier.statut == "BROUILLON" and is_owner %}
       <form method="post" action="{% url 'recueil:dossier-supprimer' dossier.pk %}"
             onsubmit="return confirm('Supprimer ce brouillon ? Il restera traçable dans le journal d\'audit.')">
         {% csrf_token %}
         <button class="button button-outline" type="submit" style="color:var(--red);border-color:var(--red);">Supprimer le brouillon</button>
       </form>
     {% endif %}
-    <form method="post" action="{% url 'recueil:dossier-reprendre' dossier.pk %}">{% csrf_token %}<button class="button button-outline" type="submit">Nouveau dossier</button></form>
   </div>
   {% endif %}
 </div>
 {% if dossier.signe_le %}<div class="internal-warning"><strong>DOSSIER SIGNÉ</strong><span>Signé le {{ dossier.signe_le|date:"d/m/Y à H:i" }} par {{ dossier.signe_par|default:"—" }}. Les corrections doivent être apportées dans un nouveau dossier.</span></div>{% endif %}
 {% if dossier.derniere_impression_le and dossier.maj_le > dossier.derniere_impression_le %}<div class="internal-warning"><strong>ATTENTION — LA VERSION IMPRIMÉE N'EST PLUS À JOUR</strong><span>Le dossier a été modifié après sa dernière impression du {{ dossier.derniere_impression_le|date:"d/m/Y à H:i" }}.</span></div>{% endif %}
+{% if dossier.statut == "BROUILLON" %}<div class="internal-warning"><strong>BROUILLON D'AGENCE</strong><span>Initi&eacute; par {{ initiateur_affichage }}. Les gestionnaires de la m&ecirc;me agence peuvent poursuivre sa saisie.</span></div>{% endif %}
 <article class="synthesis">
   <header class="synthesis-head">
     <div class="synthesis-brand"><span class="brand-mark">B</span><span><strong>BCB</strong><small>BANQUE COMMERCIALE DU BURKINA</small></span></div>

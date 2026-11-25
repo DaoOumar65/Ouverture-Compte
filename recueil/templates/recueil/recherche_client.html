@@ -5,7 +5,7 @@
   <div>
     <div class="eyebrow"><span class="eyebrow-line"></span> RÉUTILISATION SÉCURISÉE</div>
     <h1>Rechercher un client</h1>
-    <p class="page-intro">Recherchez par numéro de pièce, nom, prénom ou raison sociale. Seul le résumé minimal du dossier le plus récent est affiché.</p>
+    <p class="page-intro">Recherchez par numéro de pièce, nom, prénom ou raison sociale. Les dossiers finalisés du réseau sont recherchables pour préparer une nouvelle ouverture ; les brouillons restent visibles uniquement dans leur agence.</p>
   </div>
 </section>
 <section class="form-section">
@@ -26,10 +26,26 @@
       <div class="synthesis-value"><dt>Type de compte</dt><dd>{{ resultat.type_compte }}</dd></div>
       <div class="synthesis-value"><dt>Agence de création</dt><dd>{{ resultat.agence|default:"—" }}</dd></div>
     </dl>
-    <form method="post" action="{% url 'recueil:dossier-reprendre' resultat.pk %}">
-      {% csrf_token %}
-      <button class="button button-primary" type="submit">Créer un nouveau dossier à partir de ces informations</button>
-    </form>
+    {% if resultat.statut == "BROUILLON" %}
+      <form method="post" action="{% url 'recueil:dossier-reprendre' resultat.pk %}">
+        {% csrf_token %}
+        <button class="button button-primary" type="submit">Reprendre ce brouillon</button>
+      </form>
+    {% else %}
+      <p class="internal-warning"><strong>Dossier déjà créé</strong><span>Le dossier source reste protégé. Vous pouvez préparer une ouverture d'un autre type pour ce client ; les informations reprises doivent être vérifiées avec lui.</span></p>
+      {% if resultat.autres_types %}
+        <form method="post" action="{% url 'recueil:dossier-reprendre' resultat.pk %}" class="search-form">
+          {% csrf_token %}
+          <label for="type-compte-cible">Type de la nouvelle ouverture</label>
+          <select id="type-compte-cible" name="type_compte" required>
+            {% for code, label in resultat.autres_types %}<option value="{{ code }}">{{ label }}</option>{% endfor %}
+          </select>
+          <button class="button button-primary" type="submit">Préparer un nouveau brouillon</button>
+        </form>
+      {% else %}
+        <p class="field-help">Un dossier est déjà enregistré pour chaque type disponible.</p>
+      {% endif %}
+    {% endif %}
   </section>
   {% else %}
   <div class="empty-state"><h2>Aucun dossier trouvé</h2><p>Vérifiez le numéro de pièce et réessayez.</p></div>

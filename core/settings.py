@@ -162,6 +162,16 @@ AD_BASE_DN = os.environ.get("AD_BASE_DN", "DC=bcb,DC=lan").strip()
 AD_CA_CERT = os.environ.get("AD_CA_CERT", "").strip()
 AD_TIMEOUT_MS = int(os.environ.get("AD_TIMEOUT_MS", "5000"))
 
+# Oracle Amplitude (base centrale, connexion en lecture seule depuis l'application).
+AMPLITUDE_HOTE = os.environ.get("AMPLITUDE_HOTE", "").strip()
+AMPLITUDE_PORT = int(os.environ.get("AMPLITUDE_PORT", "1530"))
+AMPLITUDE_SID = os.environ.get("AMPLITUDE_SID", "").strip()
+AMPLITUDE_NOM_SERVICE = os.environ.get("AMPLITUDE_NOM_SERVICE", "").strip()
+AMPLITUDE_SCHEMA = os.environ.get("AMPLITUDE_SCHEMA", "BCBPROD").strip()
+AMPLITUDE_UTILISATEUR = os.environ.get("AMPLITUDE_UTILISATEUR", "").strip()
+AMPLITUDE_MOT_DE_PASSE = os.environ.get("AMPLITUDE_MOT_DE_PASSE", "")
+AMPLITUDE_TIMEOUT_S = float(os.environ.get("AMPLITUDE_TIMEOUT_S", "5"))
+
 if AUTH_MODE == "AD":
     AUTHENTICATION_BACKENDS = ["recueil.auth_backends.ActiveDirectoryBackend"]
 else:

@@ -16,6 +16,31 @@
 
 {% if form.non_field_errors %}<div class="form-alert" role="alert">{{ form.non_field_errors }}</div>{% endif %}
 
+<section class="amplitude-lookup" aria-labelledby="amplitude-lookup-title">
+  <div class="amplitude-lookup-copy">
+    <span class="amplitude-lookup-kicker">RECHERCHE CLIENT EXISTANT</span>
+    <h2 id="amplitude-lookup-title">Vérifier dans AMPLITUDE</h2>
+    <p>Renseignez un compte et son agence. Si le client existe, ses informations connues seront reprises dans le formulaire.</p>
+  </div>
+  <form class="amplitude-lookup-form" data-amplitude-lookup data-lookup-url="/clients/amplitude/rechercher/" novalidate>
+    {% csrf_token %}
+    <div class="amplitude-lookup-fields">
+      <div class="field">
+        <label for="amplitude-account">Numéro de compte</label>
+        <input id="amplitude-account" name="numero_compte" type="text" inputmode="numeric" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label for="amplitude-agency">Code agence</label>
+        <input id="amplitude-agency" name="agence" type="text" maxlength="5" autocomplete="off" required>
+      </div>
+      <button class="button button-primary amplitude-lookup-submit" type="button" data-lookup-submit>
+        <span aria-hidden="true">⌕</span> Vérifier
+      </button>
+    </div>
+    <p class="amplitude-lookup-status" data-lookup-status role="status" aria-live="polite" hidden></p>
+  </form>
+</section>
+
 <form method="post" class="intake-layout" novalidate>
   {% csrf_token %}
 

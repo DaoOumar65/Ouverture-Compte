@@ -1,11 +1,12 @@
 {% extends "recueil/base.html" %}
+{% load static %}
 {% block title %}Dossiers · BCB Ouverture de compte{% endblock %}
 {% block content %}
-<section class="page-heading heading-list">
+<section class="page-heading heading-list" data-sync-refresh>
   <div>
     <div class="eyebrow"><span class="eyebrow-line"></span> ESPACE DE TRAVAIL</div>
     <h1>Dossiers d’ouverture de compte</h1>
-    <p class="page-intro">Générez les formulaires depuis un brouillon, vérifiez-les, puis enregistrez le dossier créé.</p>
+    <p class="page-intro">Les brouillons sont partagés entre collègues d’une même agence. Les dossiers créés sont signalés dans tout le réseau pour prévenir les doublons.</p>
   </div>
   {% if not is_admin %}
   <div class="detail-actions">
@@ -27,7 +28,7 @@
     </select>
     <button class="button button-outline" type="submit">Filtrer</button>
   </form>
-  <span class="list-count"><strong>{{ page_obj.paginator.count }}</strong> dossier{{ page_obj.paginator.count|pluralize:"s" }}</span>
+  <span class="list-count"><strong>{{ page_obj.paginator.count }}</strong> dossier{{ page_obj.paginator.count|pluralize:"s" }} · synchronisation automatique</span>
 </section>
 
 <section class="table-wrap" tabindex="0" role="region" aria-label="Liste des dossiers, défilement horizontal possible">
@@ -36,26 +37,30 @@
     <thead><tr><th>Référence</th><th>Client / entreprise</th><th>Formule de compte</th><th>Statut</th><th>Mis à jour</th><th>Actions</th></tr></thead>
     <tbody>
       {% for dossier in page_obj %}
-      <tr>
-        <td><a class="reference-link" href="{% url 'recueil:dossier-detail' dossier.pk %}">{{ dossier.reference }}</a></td>
-        <td><strong class="client-name">{% if dossier.type_compte == "COMMERCIAL" and dossier.pm_raison_sociale %}{{ dossier.pm_raison_sociale }}{% else %}{{ dossier.prenoms }} {{ dossier.nom }}{% endif %}</strong><small class="row-subtitle">{% if dossier.type_compte == "COMMERCIAL" %}Dossier commercial{% else %}Dossier particulier{% endif %}</small></td>
+      <tr{% if dossier.is_global_notice %} class="dossier-global-notice"{% endif %}>
+        <td>{% if dossier.is_global_notice %}<span class="reference-link">Dossier existant</span>{% else %}<a class="reference-link" href="{% url 'recueil:dossier-detail' dossier.pk %}">{{ dossier.reference }}</a>{% endif %}</td>
+        <td>{% if dossier.is_global_notice %}<strong class="client-name">Un dossier est déjà créé dans le réseau BCB</strong><small class="row-subtitle">{{ dossier.agence_snapshot }} · identité masquée hors agence</small>{% else %}<strong class="client-name">{% if dossier.type_compte == "COMMERCIAL" and dossier.pm_raison_sociale %}{{ dossier.pm_raison_sociale }}{% else %}{{ dossier.prenoms }} {{ dossier.nom }}{% endif %}</strong><small class="row-subtitle">{% if dossier.type_compte == "COMMERCIAL" %}Dossier commercial{% else %}Dossier particulier{% endif %}{% if dossier.statut == "BROUILLON" %} · brouillon{% if dossier.is_shared_draft %} partagé{% endif %} · initié par {{ dossier.initiateur_affichage }}{% endif %}</small>{% endif %}</td>
         <td>{{ dossier.get_formule_produit_display }}</td>
         <td><span class="status status-{{ dossier.statut|lower }}"><span class="status-dot"></span>{{ dossier.get_statut_display }}</span></td>
         <td class="date-cell">{{ dossier.maj_le|date:"d/m/Y" }}<small>{{ dossier.maj_le|date:"H:i" }}</small></td>
         <td class="dossier-row-actions">
+          {% if dossier.is_global_notice %}
+            <a class="button button-outline" href="{% url 'recueil:recherche-client' %}">Rechercher pour une autre ouverture</a>
+          {% else %}
           {% if is_admin %}
             <a class="button button-outline" href="{% url 'recueil:dossier-detail' dossier.pk %}">Voir</a>
           {% else %}
-            {% if not dossier.signe_le %}<a class="button button-quiet" href="{% url 'recueil:dossier-edit' dossier.pk %}">Modifier</a>{% endif %}
+            {% if not dossier.signe_le and dossier.statut == "BROUILLON" %}<a class="button button-quiet" href="{% url 'recueil:dossier-edit' dossier.pk %}">Terminer</a>{% endif %}
             <a class="button button-outline" href="{% url 'recueil:dossier-detail' dossier.pk %}">Voir</a>
             {% if dossier.statut == "BROUILLON" %}
               <a class="button button-primary" href="{% url 'recueil:dossier-print' dossier.pk %}">Générer</a>
-              <form method="post" action="{% url 'recueil:dossier-supprimer' dossier.pk %}" onsubmit="return confirm('Supprimer ce brouillon ? Il restera traçable dans le journal d’audit.')">
+              {% if dossier.is_owner %}<form method="post" action="{% url 'recueil:dossier-supprimer' dossier.pk %}" onsubmit="return confirm('Supprimer ce brouillon ? Il restera traçable dans le journal d’audit.')">
                 {% csrf_token %}<button class="button button-danger" type="submit">Supprimer</button>
-              </form>
+              </form>{% endif %}
             {% else %}
               <a class="button button-primary" href="{% url 'recueil:dossier-print' dossier.pk %}">Imprimer</a>
             {% endif %}
+          {% endif %}
           {% endif %}
         </td>
       </tr>
@@ -84,3 +89,4 @@
 </nav>
 {% endif %}
 {% endblock %}
+{% block scripts %}<script src="{% static 'recueil/app.js' %}"></script>{% endblock %}

@@ -18,11 +18,20 @@ document.querySelectorAll("[data-password-toggle]").forEach((button) => {
     if (!input) return;
     const visible = input.type === "password";
     input.type = visible ? "text" : "password";
-    button.textContent = visible ? "Masquer" : "Afficher";
     button.setAttribute("aria-pressed", String(visible));
     button.setAttribute("aria-label", visible ? "Masquer le mot de passe" : "Afficher le mot de passe");
+    button.title = visible ? "Masquer le mot de passe" : "Afficher le mot de passe";
   });
 });
+
+// Actualise la liste partagée lorsqu'elle est laissée ouverte à l'écran.
+if (document.querySelector("[data-sync-refresh]")) {
+  window.setInterval(() => {
+    const active = document.activeElement;
+    const saisieEnCours = active && ["INPUT", "SELECT", "TEXTAREA"].includes(active.tagName);
+    if (document.visibilityState === "visible" && !saisieEnCours) window.location.reload();
+  }, 30000);
+}
 
 const PAYS_AFRIQUE = [
   "Burkina Faso","Côte d'Ivoire","Mali","Niger","Sénégal","Ghana","Togo","Bénin",
@@ -440,3 +449,104 @@ function attachDatalist(fieldName, options) {
   agenceListe.addEventListener("change", syncAutre);
   syncAutre();
 })();
+
+// Recherche un compte dans AMPLITUDE sans soumettre le dossier en cours.
+document.querySelectorAll("[data-amplitude-lookup]").forEach((lookupForm) => {
+  const accountInput = lookupForm.elements.namedItem("numero_compte");
+  const agencyInput = lookupForm.elements.namedItem("agence");
+  const submitButton = lookupForm.querySelector("[data-lookup-submit]");
+  const status = lookupForm.querySelector("[data-lookup-status]");
+  const dossierForm = document.querySelector("form.intake-layout");
+  let loading = false;
+
+  const showStatus = (message, state = "") => {
+    status.textContent = message;
+    status.hidden = !message;
+    status.classList.toggle("is-error", state === "error");
+    status.classList.toggle("is-loading", state === "loading");
+  };
+
+  const populateDossier = (fields) => {
+    if (!dossierForm || !fields || typeof fields !== "object") return;
+    const values = { ...fields };
+    if (accountInput.value.trim()) values.numero_compte_bcb_existant = accountInput.value.trim();
+
+    Object.entries(values).forEach(([name, value]) => {
+      if (value === null || value === undefined) return;
+      const controls = Array.from(dossierForm.querySelectorAll(`[name="${CSS.escape(name)}"]`));
+      if (!controls.length) return;
+      const first = controls[0];
+      if (first.type === "radio") {
+        controls.forEach((control) => {
+          control.checked = String(control.value).toLowerCase() === String(value).toLowerCase();
+        });
+      } else if (first.type === "checkbox") {
+        first.checked = value === true || value === "true" || value === "1" || value === "O";
+      } else {
+        first.value = String(value);
+      }
+      controls.forEach((control) => {
+        control.dispatchEvent(new Event("input", { bubbles: true }));
+        control.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+    });
+  };
+
+  const lookup = async () => {
+    const account = accountInput.value.trim();
+    const agency = agencyInput.value.trim();
+    if (!account || !agency || loading) {
+      if (!account || !agency) showStatus("Renseignez le numéro de compte et le code agence.", "error");
+      return;
+    }
+
+    loading = true;
+    submitButton.disabled = true;
+    showStatus("Vérification du compte dans AMPLITUDE…", "loading");
+    try {
+      const body = new URLSearchParams(new FormData(lookupForm));
+      const csrfToken = lookupForm.querySelector('input[name="csrfmiddlewaretoken"]')?.value || "";
+      const response = await fetch(lookupForm.dataset.lookupUrl, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8",
+          "X-CSRFToken": csrfToken,
+        },
+        body,
+      });
+      const payload = await response.json();
+      if (payload.found === false) {
+        showStatus(payload.message || "Aucun client trouvé. Vous pouvez poursuivre la saisie manuelle.");
+        return;
+      }
+      if (!response.ok) {
+        throw new Error(payload.error || "Aucun client trouvé pour ce compte et cette agence.");
+      }
+      if (!payload.fields || typeof payload.fields !== "object") {
+        throw new Error("La réponse de la base centrale est incomplète.");
+      }
+      populateDossier(payload.fields);
+      showStatus(payload.message || "Client trouvé. Les informations disponibles ont été reprises ; complétez les autres champs manuellement.");
+    } catch (error) {
+      showStatus(error.message || "La recherche dans AMPLITUDE a échoué. Réessayez ou poursuivez la saisie manuelle.", "error");
+    } finally {
+      loading = false;
+      submitButton.disabled = false;
+    }
+  };
+
+  submitButton.addEventListener("click", lookup);
+  [accountInput, agencyInput].forEach((input) => {
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        lookup();
+      }
+    });
+  });
+  agencyInput.addEventListener("blur", () => {
+    if (accountInput.value.trim() && agencyInput.value.trim()) lookup();
+  });
+});
